@@ -19,9 +19,12 @@ const PRECACHE_PATHS = [
   'assets/gusev.webp',
   'assets/gey-himbiovech-thumb.webp',
   'assets/gey-himbiovech.webp',
+  'assets/jesse-thumb.webp',
+  'assets/jesse.webp',
   'assets/valentin.jpg',
   'assets/gusev.jpg',
-  'assets/gey-himbiovech.jpg'
+  'assets/gey-himbiovech.jpg',
+  'assets/jesse.jpg'
 ];
 
 self.addEventListener('install', (event) => {

@@ -241,9 +241,10 @@ const WIKI_ENTITIES = [
   { pattern: /(?:Гей|Гея|Гею|Геем)\s+Химирович(?:а|у|ем|е)?/, route: 'character/gey-himbiovech', id: 'gey-himbiovech' },
   { pattern: /Химбиович(?:а|у|ем|е)?/, route: 'character/gey-himbiovech', id: 'gey-himbiovech' },
   { pattern: /Хербиович(?:а|у|ем|е)?/, route: 'character/gey-himbiovech', id: 'gey-himbiovech' },
-  { pattern: /Жесси\s+рiзiв(?:ым|ого|ому|ый)\s+пiрн(?:ем|я|ю|ь)/, route: 'character/jesse-pinkman', id: 'jesse-pinkman' },
+  { pattern: /(?:Джесси|Жесси)\s+[рp][іiи]з[іiи]в(?:ым|ого|ому|ый)\s+[пp][іiи]+р(?:ень|н(?:ем|я|ю|ь|е))/, route: 'character/jesse-pinkman', id: 'jesse-pinkman' },
+  { pattern: /Сен(?:я|и|е|ю|ей)\s+Аналбаев(?:а|у|ым|е)?/, route: 'character/jesse-pinkman', id: 'jesse-pinkman' },
   { pattern: /(?:Джесси|Жесси)\s+Розов(?:ый|ого|ому|ым|ом)/, route: 'character/jesse-pinkman', id: 'jesse-pinkman' },
-  { pattern: /(?:Джесси|Жесси)(?![а-яёА-ЯЁ])/, route: 'character/jesse-pinkman', id: 'jesse-pinkman' },
+  { pattern: /(?:Джесси|Жесси)(?![а-яёА-ЯЁa-zA-ZіІ])/, route: 'character/jesse-pinkman', id: 'jesse-pinkman' },
   { pattern: /ОБН\s+Подзалупинска/, route: 'faction/obn-podzalupinsk', id: 'obn-podzalupinsk' },
   { pattern: /ОБН(?![а-яёА-ЯЁ])/, route: 'faction/obn-podzalupinsk', id: 'obn-podzalupinsk' },
   { pattern: /«Пилот\s+Мефедрона»|«Пилот\s+мефедрона»/, route: 'episode/pilot-mefedrona', id: 'pilot-mefedrona' },
@@ -1222,7 +1223,7 @@ function renderCharacterArticle(container, charId) {
 
       <div class="article-main-wrapper article-body">
         <aside class="wiki-infobox infobox">
-          <div class="infobox-title">${escapeHtml(char.fullName || char.name)}</div>
+          <div class="infobox-title">${escapeHtml((char.fullNameList && char.fullNameList[0]) || char.fullName || char.name)}</div>
 
           <div class="infobox-image-wrapper">
             <div class="infobox-avatar">${renderAvatarHtml(char, { eager: true, size: 'full' })}</div>
@@ -1233,12 +1234,21 @@ function renderCharacterArticle(container, charId) {
           </div>
 
           <div class="infobox-section-header">Информация о персонаже</div>
-          ${char.fullName ? `
+          ${char.fullNameList && char.fullNameList.length > 0 ? `
+            <div class="infobox-row">
+              <div class="infobox-label">Полное имя</div>
+              <div class="infobox-value">
+                <ul class="infobox-list">
+                  ${char.fullNameList.map(fn => `<li>${escapeHtml(fn)}</li>`).join('')}
+                </ul>
+              </div>
+            </div>
+          ` : (char.fullName ? `
             <div class="infobox-row">
               <div class="infobox-label">Полное имя</div>
               <div class="infobox-value">${escapeHtml(char.fullName)}</div>
             </div>
-          ` : ''}
+          ` : '')}
           ${char.aliasesList && char.aliasesList.length > 0 ? `
             <div class="infobox-row">
               <div class="infobox-label">Псевдонимы</div>
@@ -1392,12 +1402,21 @@ function renderCharacterArticle(container, charId) {
             </div>
           ` : ''}
 
-          ${char.actor ? `
+          ${char.actorsList && char.actorsList.length > 0 ? `
+            <div class="infobox-row">
+              <div class="infobox-label">Исполнитель роли</div>
+              <div class="infobox-value">
+                <ul class="infobox-list">
+                  ${char.actorsList.map(act => `<li><strong>${escapeHtml(act)}</strong></li>`).join('')}
+                </ul>
+              </div>
+            </div>
+          ` : (char.actor ? `
             <div class="infobox-row">
               <div class="infobox-label">Исполнитель роли</div>
               <div class="infobox-value"><strong>${escapeHtml(char.actor)}</strong></div>
             </div>
-          ` : ''}
+          ` : '')}
         </aside>
 
         ${char.quote ? `
@@ -2157,7 +2176,7 @@ function renderAvatarHtml(char, options = {}) {
     const w = isFull ? 260 : 96;
     const h = isFull ? 240 : 96;
     const rawAvatar = String(char.avatar);
-    const localMatch = rawAvatar.match(/^assets\/(valentin|gusev|gey-himbiovech)\.jpg$/i);
+    const localMatch = rawAvatar.match(/^assets\/(valentin|gusev|gey-himbiovech|jesse)\.jpg$/i);
 
     if (localMatch) {
       const slug = localMatch[1];
