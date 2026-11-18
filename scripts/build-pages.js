@@ -24,7 +24,7 @@ const { createBrowserEnvironment } = require('../tests/test_harness');
 const ROOT_DIR = path.resolve(__dirname, '..');
 const SITE_ORIGIN = 'https://sanzharshaymerdenov5-collab.github.io/Vovsehuyevie';
 const DATA_VERSION = '2.6';
-const LASTMOD = '2026-11-13';
+const LASTMOD = '2026-11-18';
 
 const FAVICON_SVG_DATA = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚗️</text></svg>";
 

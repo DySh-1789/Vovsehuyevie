@@ -271,15 +271,19 @@ def run_tests():
     runner.check(all_freqs_valid, "All <changefreq> values belong to RFC sitemap vocabulary")
     runner.check(all_prios_valid, "All <priority> values are valid floats bounded within [0.0, 1.0]")
 
-    # Check key navigation views resolution in app.js
-    expected_views = ['#home', '#characters', '#factions', '#episodes', '#timeline']
-    for v in expected_views:
-        url_entry = f"{CANONICAL_BASE}{v}"
-        runner.check(url_entry in loc_set, f"Sitemap includes key SPA route: {v}")
-        view_name = v.lstrip('#')
-        # Ensure view name is handled in app.js router
+    # Check key navigation views resolution in app.js (clean #-free directory URLs)
+    expected_views = [
+        ("", "home"),
+        ("characters/", "characters"),
+        ("factions/", "factions"),
+        ("episodes/", "episodes"),
+        ("timeline/", "timeline"),
+    ]
+    for path_suffix, view_name in expected_views:
+        url_entry = f"{CANONICAL_BASE}{path_suffix}"
+        runner.check(url_entry in loc_set, f"Sitemap includes key route: {url_entry}")
         router_handles_view = (f"'{view_name}'" in app_js_content or f'"{view_name}"' in app_js_content)
-        runner.check(router_handles_view, f"SPA client-side router handles sitemap route '{view_name}'")
+        runner.check(router_handles_view, f"Router handles sitemap route '{view_name}'")
 
     # =========================================================================
     # SUITE 2: ROBOTS.TXT RFC 9309 COMPLIANCE WITH ROBOT PARSERS
