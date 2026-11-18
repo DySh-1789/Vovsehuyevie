@@ -102,7 +102,7 @@
         <h1 class="portal-title directory-title">Картотека персонажей</h1>
         <div class="article-subheading">Полный каноничный реестр действующих лиц Подзалупинска</div>
       </div>
-      <div class="wiki-counter-badge"><span class="badge-dot">●</span> <strong>7</strong> персонажей задокументировано</div>
+      <div class="wiki-counter-badge"><span class="badge-dot">●</span> <strong id="dirResultCount">7</strong> персонажей задокументировано</div>
     </div>
 
     <div class="dir-toolbar">
@@ -126,6 +126,16 @@
           <option value="Отбывает срок">Отбывает срок</option>
         </select>
       </div>
+    </div>
+
+    <div class="dir-quick-bar">
+      <div class="dir-quick-chips" role="group" aria-label="Быстрый фильтр по статусу">
+        <button type="button" class="dir-quick-chip active" data-quick-status="all">Все (7)</button>
+        <button type="button" class="dir-quick-chip" data-quick-status="Жив">🟢 Живы (2)</button>
+        <button type="button" class="dir-quick-chip" data-quick-status="Мёртв">🔴 Мертвы (4)</button>
+        <button type="button" class="dir-quick-chip" data-quick-status="Отбывает срок">🟠 В колонии (1)</button>
+      </div>
+      <button type="button" class="dir-reset-btn hidden" id="dirResetFiltersBtn">✕ Сбросить фильтры</button>
     </div>
 
     <h2 class="visually-hidden">Список персонажей</h2>

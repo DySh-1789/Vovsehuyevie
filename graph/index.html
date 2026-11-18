@@ -144,6 +144,9 @@
       <div class="graph-layout-grid">
         <div class="graph-canvas-wrap">
           <svg id="relationshipGraphSvg" class="graph-svg" viewbox="0 0 820 500" role="img" aria-label="Схема связей персонажей сериала Во Все Хуёвые">
+            <defs>
+              <clippath id="graphClip_valentin-belinsky"><circle cx="410" cy="250" r="27"></circle></clippath><clippath id="graphClip_jesse-pinkman"><circle cx="410" cy="80" r="21"></circle></clippath><clippath id="graphClip_gey-himbiovech"><circle cx="181" cy="335" r="21"></circle></clippath><clippath id="graphClip_gusev-ferangiy"><circle cx="181" cy="165" r="21"></circle></clippath>
+            </defs>
             <g class="graph-edges-layer">
               <line class="graph-edge active" data-from="valentin-belinsky" data-to="skyler-belinskaya" x1="410" y1="250" x2="639" y2="335"><line class="graph-edge active" data-from="valentin-belinsky" data-to="stoyak-belinsky" x1="410" y1="250" x2="639" y2="165"><line class="graph-edge active" data-from="valentin-belinsky" data-to="jesse-pinkman" x1="410" y1="250" x2="410" y2="80"><line class="graph-edge active" data-from="valentin-belinsky" data-to="sosik-goodman" x1="410" y1="250" x2="410" y2="420"><line class="graph-edge dimmed" data-from="jesse-pinkman" data-to="sosik-goodman" x1="410" y1="80" x2="410" y2="420"><line class="graph-edge dimmed" data-from="jesse-pinkman" data-to="gey-himbiovech" x1="410" y1="80" x2="181" y2="335"><line class="graph-edge dimmed" data-from="stoyak-belinsky" data-to="skyler-belinskaya" x1="639" y1="165" x2="639" y2="335"><line class="graph-edge dimmed" data-from="stoyak-belinsky" data-to="gey-himbiovech" x1="639" y1="165" x2="181" y2="335"><line class="graph-edge dimmed" data-from="gey-himbiovech" data-to="gusev-ferangiy" x1="181" y1="335" x2="181" y2="165"><line class="graph-edge active" data-from="gey-himbiovech" data-to="valentin-belinsky" x1="181" y1="335" x2="410" y2="250"><line class="graph-edge active" data-from="gusev-ferangiy" data-to="valentin-belinsky" x1="181" y1="165" x2="410" y2="250"><line class="graph-edge dimmed" data-from="gusev-ferangiy" data-to="stoyak-belinsky" x1="181" y1="165" x2="639" y2="165">
             </line></line></line></line></line></line></line></line></line></line></line></line></g>
@@ -151,17 +154,17 @@
               
                 <g class="graph-node" data-node-id="valentin-belinsky" data-faction-id="huizenberg-empire" role="button" tabindex="0" aria-label="Выбрать персонажа: Валентин Белинский">
                   <circle class="graph-node-circle" cx="410" cy="250" r="30" fill="var(--bg-secondary)" stroke="#10b981" stroke-width="5">
-                  <text x="410" y="256" text-anchor="middle" font-size="20" pointer-events="none">👤</text>
+                  <image href="../assets/valentin-thumb.webp" x="383" y="223" width="54" height="54" preserveaspectratio="xMidYMid slice" clip-path="url(#graphClip_valentin-belinsky)" pointer-events="none">
                   <text class="graph-node-label" x="410" y="298">Валентин Белинский</text>
                   <text class="graph-node-sublabel" x="410" y="311">Мёртв</text>
-                </circle></g>
+                </image></circle></g>
               
                 <g class="graph-node" data-node-id="jesse-pinkman" data-faction-id="huizenberg-empire" role="button" tabindex="0" aria-label="Выбрать персонажа: Жесси різівый пірень">
                   <circle class="graph-node-circle" cx="410" cy="80" r="24" fill="var(--bg-secondary)" stroke="#10b981" stroke-width="3">
-                  <text x="410" y="86" text-anchor="middle" font-size="20" pointer-events="none">👤</text>
+                  <image href="../assets/jesse-thumb.webp" x="389" y="59" width="42" height="42" preserveaspectratio="xMidYMid slice" clip-path="url(#graphClip_jesse-pinkman)" pointer-events="none">
                   <text class="graph-node-label" x="410" y="122">Жесси різівый пірень</text>
                   <text class="graph-node-sublabel" x="410" y="135">Жив</text>
-                </circle></g>
+                </image></circle></g>
               
                 <g class="graph-node" data-node-id="stoyak-belinsky" data-faction-id="obn-podzalupinsk" role="button" tabindex="0" aria-label="Выбрать персонажа: Стояк Белинский">
                   <circle class="graph-node-circle" cx="639" cy="165" r="24" fill="var(--bg-secondary)" stroke="#3b82f6" stroke-width="3">
@@ -186,27 +189,32 @@
               
                 <g class="graph-node" data-node-id="gey-himbiovech" data-faction-id="gusev-empire" role="button" tabindex="0" aria-label="Выбрать персонажа: Гей Химбиович">
                   <circle class="graph-node-circle" cx="181" cy="335" r="24" fill="var(--bg-secondary)" stroke="#f59e0b" stroke-width="3">
-                  <text x="181" y="341" text-anchor="middle" font-size="20" pointer-events="none">👤</text>
+                  <image href="../assets/gey-himbiovech-thumb.webp" x="160" y="314" width="42" height="42" preserveaspectratio="xMidYMid slice" clip-path="url(#graphClip_gey-himbiovech)" pointer-events="none">
                   <text class="graph-node-label" x="181" y="377">Гей Химбиович</text>
                   <text class="graph-node-sublabel" x="181" y="390">Мёртв</text>
-                </circle></g>
+                </image></circle></g>
               
                 <g class="graph-node" data-node-id="gusev-ferangiy" data-faction-id="gusev-empire" role="button" tabindex="0" aria-label="Выбрать персонажа: Гусев Ферангий">
                   <circle class="graph-node-circle" cx="181" cy="165" r="24" fill="var(--bg-secondary)" stroke="#f59e0b" stroke-width="3">
-                  <text x="181" y="171" text-anchor="middle" font-size="20" pointer-events="none">👤</text>
+                  <image href="../assets/gusev-thumb.webp" x="160" y="144" width="42" height="42" preserveaspectratio="xMidYMid slice" clip-path="url(#graphClip_gusev-ferangiy)" pointer-events="none">
                   <text class="graph-node-label" x="181" y="207">Гусев Ферангий</text>
                   <text class="graph-node-sublabel" x="181" y="220">Мёртв</text>
-                </circle></g>
+                </image></circle></g>
               
             </g>
           </svg>
         </div>
 
         <aside class="graph-detail-panel" id="graphDetailPanel" aria-live="polite">
-        <h2 class="graph-detail-title">Валентин Белинский</h2>
-        <div style="margin-bottom: 10px;">
-          <span class="status-badge status-мёртв">Мёртв</span>
-          <span class="meta-pill" style="margin-left: 6px;">Наркоимперия Хуйзенберга</span>
+        <div class="graph-detail-header">
+          <div class="graph-detail-avatar"><picture><source srcset="../assets/valentin-thumb.webp" type="image/webp"><img src="../assets/valentin.jpg" alt="Валентин Белинский" loading="lazy" decoding="async" width="96" height="96"></picture></div>
+          <div class="graph-detail-meta">
+            <h2 class="graph-detail-title">Валентин Белинский</h2>
+            <div class="graph-detail-badges">
+              <span class="status-badge status-мёртв">Мёртв</span>
+              <span class="meta-pill">Наркоимперия Хуйзенберга</span>
+            </div>
+          </div>
         </div>
         <p style="font-size: 13px; color: var(--text-secondary);">Валентин «Белый» Белинский Агафонович — бывший учитель полового воспитания младших классов и подменяющий учителей химии из Подзалупинска. Переродился в легендарного варщика мефедрона под именем Хуйзенберг и закончил свою жизнь отшельником.</p>
         <h3 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; margin-top: 14px; color: var(--text-muted);">Связи (4)</h3>

@@ -294,6 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initArchitectureModal();
   initExportReset();
   initBackToTop();
+  initReadingProgress();
 
   // Слушатели истории браузера (History API без #) и совместимость со старыми #-ссылками
   window.addEventListener('popstate', handleRoute);
@@ -615,6 +616,8 @@ function handleRoute() {
   if (sModal && !sModal.classList.contains('hidden')) sModal.classList.add('hidden');
   const aModal = document.getElementById('architectureModal');
   if (aModal && !aModal.classList.contains('hidden')) aModal.classList.add('hidden');
+  closePortraitLightbox();
+  hideWikiPreviewPopover();
 
   if (parsed.isAnchorOnly) {
     if (viewport && (!viewport.children || viewport.children.length === 0)) {
@@ -761,6 +764,7 @@ function handleRoute() {
   if (targetSec) {
     scrollToArticleSection(targetSec);
   }
+  updateReadingProgress();
 }
 
 function updateBreadcrumbs(crumbs) {
@@ -844,6 +848,25 @@ function bindDynamicLinks(container) {
       copyCurrentUrl(secId);
     });
   });
+
+  container.querySelectorAll('[data-lightbox-char]').forEach(el => {
+    if (el._wikiLightboxBound) return;
+    el._wikiLightboxBound = true;
+    const openLb = (e) => {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      const cId = el.getAttribute('data-lightbox-char');
+      const cObj = (STATE.data.characters || []).find(c => c.id === cId);
+      if (cObj) openPortraitLightbox(cObj, el);
+    };
+    el.addEventListener('click', openLb);
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        openLb(e);
+      }
+    });
+  });
+
+  bindWikiPreviewLinks(container);
 }
 
 function openRandomArticle() {
@@ -980,13 +1003,23 @@ function renderCharactersDirectory(container, params = null) {
   const characters = STATE.data.characters;
   const factions = STATE.data.factions;
 
+  const aliveCount = characters.filter(c => (c.status || '').toLowerCase().includes('жив')).length;
+  const deadCount = characters.filter(c => {
+    const s = (c.status || '').toLowerCase();
+    return s.includes('мертв') || s.includes('мёртв') || s.includes('погиб');
+  }).length;
+  const prisonCount = characters.filter(c => {
+    const s = (c.status || '').toLowerCase();
+    return s.includes('срок') || s.includes('колони') || s.includes('тюрьм');
+  }).length;
+
   container.innerHTML = `
     <div class="portal-grid-header directory-header">
       <div>
         <h1 class="portal-title directory-title">Картотека персонажей</h1>
         <div class="article-subheading">Полный каноничный реестр действующих лиц Подзалупинска</div>
       </div>
-      <div class="wiki-counter-badge"><span class="badge-dot">●</span> <strong>${characters.length}</strong> персонажей задокументировано</div>
+      <div class="wiki-counter-badge"><span class="badge-dot">●</span> <strong id="dirResultCount">${characters.length}</strong> персонажей задокументировано</div>
     </div>
 
     <div class="dir-toolbar">
@@ -1012,6 +1045,16 @@ function renderCharactersDirectory(container, params = null) {
       </div>
     </div>
 
+    <div class="dir-quick-bar">
+      <div class="dir-quick-chips" role="group" aria-label="Быстрый фильтр по статусу">
+        <button type="button" class="dir-quick-chip active" data-quick-status="all">Все (${characters.length})</button>
+        <button type="button" class="dir-quick-chip" data-quick-status="Жив">🟢 Живы (${aliveCount})</button>
+        <button type="button" class="dir-quick-chip" data-quick-status="Мёртв">🔴 Мертвы (${deadCount})</button>
+        <button type="button" class="dir-quick-chip" data-quick-status="Отбывает срок">🟠 В колонии (${prisonCount})</button>
+      </div>
+      <button type="button" class="dir-reset-btn hidden" id="dirResetFiltersBtn">✕ Сбросить фильтры</button>
+    </div>
+
     <h2 class="visually-hidden">Список персонажей</h2>
     <div class="cards-grid" id="directoryCardsGrid">
       ${characters.map(char => renderCharacterCardHtml(char)).join('')}
@@ -1022,6 +1065,9 @@ function renderCharactersDirectory(container, params = null) {
   const factionSelect = document.getElementById('dirFactionFilter');
   const statusSelect = document.getElementById('dirStatusFilter');
   const grid = document.getElementById('directoryCardsGrid');
+  const countEl = document.getElementById('dirResultCount');
+  const resetBtn = document.getElementById('dirResetFiltersBtn');
+  const quickChips = container.querySelectorAll('[data-quick-status]');
 
   if (params) {
     if (params.get('faction')) {
@@ -1046,6 +1092,14 @@ function renderCharactersDirectory(container, params = null) {
     const stat = statusSelect.value || 'all';
     const targetFaction = fac === 'all' ? null : STATE.data.factions.find(f => f.id === fac);
 
+    quickChips.forEach(chip => {
+      chip.classList.toggle('active', chip.getAttribute('data-quick-status') === stat);
+    });
+    if (resetBtn) {
+      const isFiltered = Boolean(q) || fac !== 'all' || stat !== 'all';
+      resetBtn.classList.toggle('hidden', !isFiltered);
+    }
+
     const filtered = STATE.data.characters.filter(c => {
       const searchPool = [
         c.name, c.alias, c.role, c.fullName,
@@ -1068,12 +1122,34 @@ function renderCharactersDirectory(container, params = null) {
       return matchText && matchFac && matchStat;
     });
 
+    if (countEl) {
+      countEl.textContent = filtered.length === characters.length
+        ? `${characters.length}`
+        : `${filtered.length} из ${characters.length}`;
+    }
+
     if (filtered.length === 0) {
       grid.innerHTML = `<div class="empty-state-box">Персонажи по заданным критериям не найдены.</div>`;
     } else {
       grid.innerHTML = filtered.map(c => renderCharacterCardHtml(c)).join('');
       bindDynamicLinks(grid);
     }
+  }
+
+  quickChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      statusSelect.value = chip.getAttribute('data-quick-status') || 'all';
+      applyFilter();
+    });
+  });
+
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      input.value = '';
+      factionSelect.value = 'all';
+      statusSelect.value = 'all';
+      applyFilter();
+    });
   }
 
   input.addEventListener('input', debounce(applyFilter, 150));
@@ -1114,7 +1190,7 @@ function renderCharacterArticle(container, charId) {
     ? (Array.isArray(char.biography) ? char.biography : char.biography.split('\n\n'))
     : [];
   const bioParagraphs = bioArray.length > 0
-    ? bioArray.filter(p => p.trim().length > 0).map(p => `<p>${renderWikiProse(p, char.id)}</p>`).join('')
+    ? bioArray.filter(p => p.trim().length > 0).map(p => formatBioParagraphHtml(p, char.id)).join('')
     : '<p>Подробная биография еще не задокументирована архивариусами Подзалупинска.</p>';
 
   let sectionIndex = 1;
@@ -1226,7 +1302,7 @@ function renderCharacterArticle(container, charId) {
           <div class="infobox-title">${escapeHtml((char.fullNameList && char.fullNameList[0]) || char.fullName || char.name)}</div>
 
           <div class="infobox-image-wrapper">
-            <div class="infobox-avatar">${renderAvatarHtml(char, { eager: true, size: 'full' })}</div>
+            <div class="infobox-avatar${char.isImage ? ' infobox-avatar-zoomable' : ''}"${char.isImage ? ` data-lightbox-char="${escapeHtml(char.id)}" role="button" tabindex="0" aria-label="Увеличить портрет: ${escapeHtml(char.name)}" title="Нажмите, чтобы открыть полный портрет"` : ''}>${renderAvatarHtml(char, { eager: true, size: 'full' })}</div>
             <div class="infobox-caption">${escapeHtml(char.role || 'Персонаж')}</div>
             <div style="margin-top: 8px;">
               <span class="status-badge status-${statusCls}">${escapeHtml(char.status)}</span>
@@ -1533,6 +1609,7 @@ function renderCharacterArticle(container, charId) {
             ${categoryItems.map(cat => `<li><a href="${routeToHref(cat.route)}" class="cat-link">${escapeHtml(cat.label)}</a></li>`).join('')}
           </ul>
         </div>
+        ${renderArticlePagerHtml('character', char.id)}
       </div>
     </article>
   `;
@@ -1729,6 +1806,7 @@ function renderFactionArticle(container, factionId) {
             <li><a href="${routeToHref('home')}" class="cat-link">Канон «Во Все Хуёвые»</a></li>
           </ul>
         </div>
+        ${renderArticlePagerHtml('faction', faction.id)}
       </div>
     </article>
   `;
@@ -2043,6 +2121,12 @@ function renderRelationshipGraph(container) {
       <div class="graph-layout-grid">
         <div class="graph-canvas-wrap">
           <svg id="relationshipGraphSvg" class="graph-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Схема связей персонажей сериала Во Все Хуёвые">
+            <defs>
+              ${nodes.filter(n => n.char.isImage && n.char.avatar).map(n => {
+                const rClip = n.id === 'valentin-belinsky' ? 27 : 21;
+                return `<clipPath id="graphClip_${escapeHtml(n.id)}"><circle cx="${n.x}" cy="${n.y}" r="${rClip}" /></clipPath>`;
+              }).join('')}
+            </defs>
             <g class="graph-edges-layer">
               ${edges.map(e => {
                 const n1 = nodeMap.get(e.from);
@@ -2051,14 +2135,23 @@ function renderRelationshipGraph(container) {
               }).join('')}
             </g>
             <g class="graph-nodes-layer">
-              ${nodes.map(n => `
+              ${nodes.map(n => {
+                const rOuter = n.id === 'valentin-belinsky' ? 30 : 24;
+                const rInner = n.id === 'valentin-belinsky' ? 27 : 21;
+                const thumbHref = n.char.isImage && n.char.avatar
+                  ? assetUrl(String(n.char.avatar).replace(/^assets\/(valentin|gusev|gey-himbiovech|jesse)\.jpg$/i, 'assets/$1-thumb.webp'))
+                  : '';
+                return `
                 <g class="graph-node" data-node-id="${n.id}" data-faction-id="${n.char.factionId || ''}" role="button" tabindex="0" aria-label="Выбрать персонажа: ${escapeHtml(n.char.name)}">
-                  <circle class="graph-node-circle" cx="${n.x}" cy="${n.y}" r="${n.id === 'valentin-belinsky' ? 30 : 24}" fill="var(--bg-secondary)" stroke="${escapeHtml(n.color)}" />
-                  <text x="${n.x}" y="${n.y + 6}" text-anchor="middle" font-size="20" pointer-events="none">${n.char.isImage ? '👤' : escapeHtml(n.char.avatar || '👤')}</text>
+                  <circle class="graph-node-circle" cx="${n.x}" cy="${n.y}" r="${rOuter}" fill="var(--bg-secondary)" stroke="${escapeHtml(n.color)}" />
+                  ${thumbHref
+                    ? `<image href="${escapeHtml(thumbHref)}" x="${n.x - rInner}" y="${n.y - rInner}" width="${rInner * 2}" height="${rInner * 2}" preserveAspectRatio="xMidYMid slice" clip-path="url(#graphClip_${escapeHtml(n.id)})" pointer-events="none" />`
+                    : `<text x="${n.x}" y="${n.y + 6}" text-anchor="middle" font-size="20" pointer-events="none">${escapeHtml(n.char.avatar || '👤')}</text>`}
                   <text class="graph-node-label" x="${n.x}" y="${n.y + (n.id === 'valentin-belinsky' ? 48 : 42)}">${escapeHtml(n.char.name)}</text>
                   <text class="graph-node-sublabel" x="${n.x}" y="${n.y + (n.id === 'valentin-belinsky' ? 61 : 55)}">${escapeHtml(n.char.status || '')}</text>
                 </g>
-              `).join('')}
+              `;
+              }).join('')}
             </g>
           </svg>
         </div>
@@ -2107,10 +2200,15 @@ function renderRelationshipGraph(container) {
       const fac = factions.find(f => f.id === selectedChar.factionId);
       const rels = selectedChar.relationships || [];
       panel.innerHTML = `
-        <h2 class="graph-detail-title">${escapeHtml(selectedChar.name)}</h2>
-        <div style="margin-bottom: 10px;">
-          <span class="status-badge status-${getStatusClass(selectedChar.status)}">${escapeHtml(selectedChar.status)}</span>
-          ${fac ? `<span class="meta-pill" style="margin-left: 6px;">${escapeHtml(fac.name)}</span>` : ''}
+        <div class="graph-detail-header">
+          <div class="graph-detail-avatar">${renderAvatarHtml(selectedChar)}</div>
+          <div class="graph-detail-meta">
+            <h2 class="graph-detail-title">${escapeHtml(selectedChar.name)}</h2>
+            <div class="graph-detail-badges">
+              <span class="status-badge status-${getStatusClass(selectedChar.status)}">${escapeHtml(selectedChar.status)}</span>
+              ${fac ? `<span class="meta-pill">${escapeHtml(fac.name)}</span>` : ''}
+            </div>
+          </div>
         </div>
         <p style="font-size: 13px; color: var(--text-secondary);">${escapeHtml(selectedChar.overview || '')}</p>
         <h3 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; margin-top: 14px; color: var(--text-muted);">Связи (${rels.length})</h3>
@@ -2377,9 +2475,9 @@ function initSearch() {
     }
   });
 
-  document.querySelectorAll('.filter-chip').forEach(chip => {
+  modal.querySelectorAll('.filter-chip').forEach(chip => {
     chip.addEventListener('click', () => {
-      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      modal.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
       STATE.searchFilter = chip.getAttribute('data-filter');
       executeSearch();
@@ -2753,6 +2851,263 @@ function showWikiToast(message) {
 }
 window.showWikiToast = showWikiToast;
 
+function initReadingProgress() {
+  let bar = document.getElementById('readingProgressBar');
+  if (!bar && document.body && typeof document.body.appendChild === 'function') {
+    bar = document.createElement('div');
+    bar.id = 'readingProgressBar';
+    bar.className = 'reading-progress-bar';
+    bar.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(bar);
+  }
+  window.addEventListener('scroll', updateReadingProgress);
+  window.addEventListener('resize', updateReadingProgress);
+  updateReadingProgress();
+}
+
+function updateReadingProgress() {
+  const bar = document.getElementById('readingProgressBar');
+  if (!bar) return;
+  const isArticleView = STATE.currentView === 'character' || STATE.currentView === 'faction' || STATE.currentView === 'timeline';
+  if (!isArticleView) {
+    bar.style.width = '0%';
+    bar.classList.remove('active');
+    return;
+  }
+  bar.classList.add('active');
+  const scrollTop = window.scrollY || (document.documentElement && document.documentElement.scrollTop) || 0;
+  const docHeight = ((document.documentElement && document.documentElement.scrollHeight) || 0) - (window.innerHeight || 0);
+  if (docHeight <= 40) {
+    bar.style.width = '0%';
+    return;
+  }
+  const pct = Math.min(100, Math.max(0, (scrollTop / docHeight) * 100));
+  bar.style.width = `${pct.toFixed(1)}%`;
+}
+
+function formatBioParagraphHtml(p, charId) {
+  const trimmed = String(p || '').trim();
+  const subheadMatch = trimmed.match(/^([^:.]{2,65}):\s+([\s\S]+)$/);
+  if (subheadMatch) {
+    return `<p><strong class="bio-subhead">${renderWikiProse(subheadMatch[1], charId)}:</strong> ${renderWikiProse(subheadMatch[2], charId)}</p>`;
+  }
+  return `<p>${renderWikiProse(trimmed, charId)}</p>`;
+}
+
+function renderArticlePagerHtml(type, currentId) {
+  const isChar = type === 'character';
+  const list = isChar ? (STATE.data.characters || []) : (STATE.data.factions || []);
+  if (list.length < 2) return '';
+
+  const idx = list.findIndex(item => item.id === currentId);
+  if (idx === -1) return '';
+
+  const prev = list[(idx - 1 + list.length) % list.length];
+  const next = list[(idx + 1) % list.length];
+  const prefix = isChar ? 'character' : 'faction';
+  const dirRoute = isChar ? 'characters' : 'factions';
+  const prevLabel = isChar ? '← Предыдущее досье' : '← Предыдущая организация';
+  const nextLabel = isChar ? 'Следующее досье →' : 'Следующая организация →';
+  const indexTitle = isChar ? `Все персонажи (${list.length})` : `Все организации (${list.length})`;
+
+  return `
+    <nav class="article-pager" aria-label="${isChar ? 'Навигация по досье персонажей' : 'Навигация по группировкам'}">
+      <a href="${routeToHref(`${prefix}/${prev.id}`)}" class="pager-link pager-prev" data-preview-route="${escapeHtml(`${prefix}/${prev.id}`)}">
+        <span class="pager-dir">${prevLabel}</span>
+        <span class="pager-title">${escapeHtml(prev.name)}</span>
+      </a>
+      <a href="${routeToHref(dirRoute)}" class="pager-link pager-index">
+        <span class="pager-dir">Картотека</span>
+        <span class="pager-title">${indexTitle}</span>
+      </a>
+      <a href="${routeToHref(`${prefix}/${next.id}`)}" class="pager-link pager-next" data-preview-route="${escapeHtml(`${prefix}/${next.id}`)}">
+        <span class="pager-dir">${nextLabel}</span>
+        <span class="pager-title">${escapeHtml(next.name)}</span>
+      </a>
+    </nav>
+  `;
+}
+
+function openPortraitLightbox(char, triggerEl = null) {
+  if (!char || !char.isImage || !char.avatar || !document.body) return;
+  closePortraitLightbox();
+  STATE.lightboxTriggerEl = triggerEl || document.activeElement;
+
+  const rawAvatar = String(char.avatar);
+  const localMatch = rawAvatar.match(/^assets\/(valentin|gusev|gey-himbiovech|jesse)\.jpg$/i);
+  const pictureHtml = localMatch
+    ? `<picture><source srcset="${escapeHtml(assetUrl(`assets/${localMatch[1]}.webp`))}" type="image/webp"><img src="${escapeHtml(assetUrl(rawAvatar))}" alt="${escapeHtml(char.name)}" class="lightbox-img"></picture>`
+    : `<img src="${escapeHtml(assetUrl(rawAvatar))}" alt="${escapeHtml(char.name)}" class="lightbox-img">`;
+
+  const statusCls = getStatusClass(char.status);
+  const overlay = document.createElement('div');
+  overlay.id = 'portraitLightboxModal';
+  overlay.className = 'lightbox-overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', `Портрет: ${char.name}`);
+
+  overlay.innerHTML = `
+    <div class="lightbox-box">
+      <button type="button" class="lightbox-close-btn" id="closeLightboxBtn" aria-label="Закрыть портрет">&times;</button>
+      <div class="lightbox-stage">
+        ${pictureHtml}
+      </div>
+      <div class="lightbox-caption-bar">
+        <div class="lightbox-caption-info">
+          <div class="lightbox-caption-title">${escapeHtml(char.name)}</div>
+          <div class="lightbox-caption-sub">${escapeHtml(char.alias || char.role || 'Персонаж')}</div>
+        </div>
+        <span class="status-badge status-${statusCls}">${escapeHtml(char.status)}</span>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const closeBtn = overlay.querySelector('#closeLightboxBtn');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closePortraitLightbox);
+    if (typeof closeBtn.focus === 'function') setTimeout(() => closeBtn.focus(), 20);
+  }
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closePortraitLightbox();
+  });
+
+  if (!window._wikiLightboxEscBound) {
+    window._wikiLightboxEscBound = true;
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.getElementById('portraitLightboxModal')) {
+        closePortraitLightbox();
+      }
+    });
+  }
+}
+
+function closePortraitLightbox() {
+  const existing = document.getElementById('portraitLightboxModal');
+  if (existing && typeof existing.remove === 'function') {
+    existing.remove();
+  }
+  if (STATE.lightboxTriggerEl && typeof STATE.lightboxTriggerEl.focus === 'function') {
+    STATE.lightboxTriggerEl.focus();
+    STATE.lightboxTriggerEl = null;
+  }
+}
+
+function getPreviewDataForRoute(routeStr) {
+  if (!routeStr || !STATE.data) return null;
+  const parts = String(routeStr).split('/');
+  const kind = parts[0];
+  const id = parts[1];
+  if (!id) return null;
+
+  if (kind === 'character') {
+    const c = (STATE.data.characters || []).find(x => x.id === id);
+    if (!c) return null;
+    return {
+      badge: c.status || 'Персонаж',
+      badgeClass: `status-${getStatusClass(c.status)}`,
+      title: c.name,
+      sub: c.alias || c.role || 'Действующее лицо',
+      desc: c.overview || '',
+      avatarHtml: renderAvatarHtml(c),
+      isImage: Boolean(c.isImage)
+    };
+  }
+
+  if (kind === 'faction') {
+    const f = (STATE.data.factions || []).find(x => x.id === id);
+    if (!f) return null;
+    return {
+      badge: f.alignment || 'Организация',
+      badgeClass: 'alignment-badge',
+      title: f.name,
+      sub: f.type || 'Группировка Подзалупинска',
+      desc: f.summary || '',
+      avatarHtml: f.avatar || '🏛️',
+      isImage: false
+    };
+  }
+
+  if (kind === 'episode') {
+    const ep = (STATE.data.episodes || []).find(x => x.id === id);
+    if (!ep) return null;
+    return {
+      badge: ep.status || 'В разработке',
+      badgeClass: 'status-missing',
+      title: `«${ep.title}»`,
+      sub: ep.kind || 'Серия сериала «Во Все Хуёвые»',
+      desc: 'Каноничный выпуск вселенной Подзалупинска. Страница находится в статусе заглушки.',
+      avatarHtml: ep.kind === 'Фильм' ? '🎞️' : '🎬',
+      isImage: false
+    };
+  }
+
+  return null;
+}
+
+function showWikiPreviewPopover(anchorEl, routeStr) {
+  if (!anchorEl || !document.body || typeof anchorEl.getBoundingClientRect !== 'function') return;
+  const info = getPreviewDataForRoute(routeStr);
+  if (!info) return;
+
+  let pop = document.getElementById('wikiPreviewPopover');
+  if (!pop) {
+    pop = document.createElement('div');
+    pop.id = 'wikiPreviewPopover';
+    pop.className = 'wiki-preview-popover';
+    pop.setAttribute('role', 'tooltip');
+    pop.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(pop);
+  }
+
+  pop.innerHTML = `
+    <div class="preview-pop-header">
+      <div class="preview-pop-avatar">${info.avatarHtml}</div>
+      <div class="preview-pop-headings">
+        <div class="preview-pop-title">${escapeHtml(info.title)}</div>
+        <div class="preview-pop-sub">${escapeHtml(info.sub)}</div>
+      </div>
+      <span class="status-badge ${escapeHtml(info.badgeClass)}">${escapeHtml(info.badge)}</span>
+    </div>
+    <p class="preview-pop-desc">${escapeHtml(info.desc)}</p>
+  `;
+
+  const rect = anchorEl.getBoundingClientRect();
+  const popWidth = 320;
+  const viewportW = window.innerWidth || 1024;
+  let left = rect.left + (rect.width / 2) - (popWidth / 2);
+  left = Math.max(12, Math.min(left, viewportW - popWidth - 12));
+  const showAbove = rect.top > 210;
+  const top = showAbove ? (rect.top - 10) : (rect.bottom + 10);
+
+  pop.style.left = `${Math.round(left)}px`;
+  pop.style.top = `${Math.round(top)}px`;
+  pop.classList.toggle('above', showAbove);
+  pop.classList.add('visible');
+}
+
+function hideWikiPreviewPopover() {
+  const pop = document.getElementById('wikiPreviewPopover');
+  if (pop) {
+    pop.classList.remove('visible');
+  }
+}
+
+function bindWikiPreviewLinks(container) {
+  if (!container) return;
+  container.querySelectorAll('[data-preview-route]').forEach(link => {
+    if (link._wikiPreviewBound) return;
+    link._wikiPreviewBound = true;
+    const routeStr = link.getAttribute('data-preview-route');
+    link.addEventListener('mouseenter', () => showWikiPreviewPopover(link, routeStr));
+    link.addEventListener('mouseleave', hideWikiPreviewPopover);
+    link.addEventListener('focus', () => showWikiPreviewPopover(link, routeStr));
+    link.addEventListener('blur', hideWikiPreviewPopover);
+  });
+}
+
 function renderWikiProse(text, currentId) {
   if (!text) return '';
   const escaped = escapeHtml(text);
@@ -2768,7 +3123,7 @@ function renderWikiProse(text, currentId) {
         if (entity.id && entity.id === currentId) {
           return `<strong class="mw-selflink">${matchedText}</strong>`;
         }
-        return `<a href="${routeToHref(entity.route)}" class="wiki-link wiki-inline-link">${matchedText}</a>`;
+        return `<a href="${routeToHref(entity.route)}" class="wiki-link wiki-inline-link" data-preview-route="${escapeHtml(entity.route)}">${matchedText}</a>`;
       }
     }
     return matchedText;

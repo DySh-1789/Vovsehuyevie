@@ -2557,6 +2557,433 @@ mark.search-highlight {
 }
 
 /* ==========================================================================
+   MODERN UX ENHANCEMENTS: PROGRESS BAR, BIO SUBHEADS, LIGHTBOX, PREVIEW, PAGER
+   ========================================================================== */
+
+/* Reading Progress Bar */
+.reading-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent-primary), #60a5fa, #34d399);
+  z-index: 400;
+  pointer-events: none;
+  opacity: 0;
+  transition: width 0.12s linear, opacity 0.2s ease;
+}
+
+.reading-progress-bar.active {
+  opacity: 1;
+}
+
+/* Structured Biography Sub-headings */
+.bio-subhead {
+  display: inline-block;
+  color: var(--text-primary);
+  font-weight: 700;
+  background: var(--accent-glow);
+  border-left: 3px solid var(--accent-primary);
+  padding: 1px 8px 1px 7px;
+  margin-right: 4px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+/* Zoomable Character Infobox Portrait */
+.infobox-avatar-zoomable {
+  position: relative;
+  cursor: zoom-in;
+}
+
+.infobox-avatar-zoomable img {
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.infobox-avatar-zoomable:hover img,
+.infobox-avatar-zoomable:focus-visible img {
+  transform: scale(1.04);
+}
+
+.infobox-avatar-zoomable::after {
+  content: '🔍 Полное фото';
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  background: rgba(15, 17, 23, 0.84);
+  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.infobox-avatar-zoomable:hover::after,
+.infobox-avatar-zoomable:focus-visible::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Full-Resolution Portrait Lightbox */
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 350;
+  background: rgba(8, 10, 15, 0.86);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: wikiViewEnter 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lightbox-box {
+  position: relative;
+  max-width: 720px;
+  width: 100%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.lightbox-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(15, 17, 23, 0.78);
+  color: #ffffff;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.lightbox-close-btn:hover {
+  background: var(--accent-primary);
+  transform: scale(1.06);
+}
+
+.lightbox-stage {
+  background: #07090e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-height: 76vh;
+  overflow: hidden;
+}
+
+.lightbox-img {
+  display: block;
+  max-width: 100%;
+  max-height: 76vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.lightbox-caption-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 20px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+}
+
+.lightbox-caption-title {
+  font-family: var(--font-heading);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.lightbox-caption-sub {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+/* Previous / Next Dossier Pager */
+.article-pager {
+  clear: both;
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+}
+
+.pager-link,
+a.pager-link {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 12px 16px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: border-color 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
+}
+
+.pager-link:hover,
+a.pager-link:hover {
+  border-color: var(--accent-primary);
+  background: var(--bg-elevated);
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+.pager-prev {
+  text-align: left;
+}
+
+.pager-index {
+  text-align: center;
+  min-width: 165px;
+}
+
+.pager-next {
+  text-align: right;
+}
+
+.pager-dir {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+}
+
+.pager-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Wikipedia-Style Hover Preview Popover */
+.wiki-preview-popover {
+  position: fixed;
+  z-index: 320;
+  width: 320px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-top: 3px solid var(--accent-primary);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 12px 14px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.wiki-preview-popover.above {
+  transform: translateY(-100%) translateY(-6px);
+}
+
+.wiki-preview-popover.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.wiki-preview-popover.above.visible {
+  opacity: 1;
+  transform: translateY(-100%);
+}
+
+.preview-pop-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.preview-pop-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.preview-pop-avatar picture,
+.preview-pop-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.preview-pop-headings {
+  flex: 1;
+  min-width: 0;
+}
+
+.preview-pop-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preview-pop-sub {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preview-pop-desc {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Directory Quick-Filter Chips & Reset Bar */
+.dir-quick-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: -8px 0 20px 0;
+}
+
+.dir-quick-chips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dir-quick-chip {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  padding: 5px 13px;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.dir-quick-chip:hover {
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+.dir-quick-chip.active {
+  background: var(--accent-glow);
+  border-color: var(--accent-primary);
+  color: var(--accent-text);
+}
+
+.dir-reset-btn {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px dashed var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font-size: 12px;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.dir-reset-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+}
+
+/* Graph Detail Panel Header with Avatar */
+.graph-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.graph-detail-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--accent-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.graph-detail-avatar picture,
+.graph-detail-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.graph-detail-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.graph-detail-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+@keyframes wikiViewEnter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==========================================================================
    RESPONSIVE DESIGN
    ========================================================================== */
 
@@ -2786,4 +3213,48 @@ mark.search-highlight {
     bottom: 64px;
     max-width: calc(100% - 32px);
   }
+
+  .article-pager {
+    grid-template-columns: 1fr;
+  }
+
+  .pager-prev,
+  .pager-index,
+  .pager-next {
+    text-align: left;
+  }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  .wiki-header,
+  .sub-banner,
+  .wiki-page-bar,
+  .mw-editsection,
+  .article-pager,
+  .wiki-footer,
+  .back-to-top-btn,
+  .reading-progress-bar,
+  .wiki-preview-popover {
+    display: none !important;
+  }
+
+  body,
+  .article-container {
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+}
+
