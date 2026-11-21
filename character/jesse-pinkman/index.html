@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="text-scale" content="scale">
+  <meta name="color-scheme" content="light dark">
+  <script>(function(){try{var s=localStorage.getItem('wiki_theme');var m=document.querySelector('meta[name="color-scheme"]');if(s==='light'||s==='dark'){if(m)m.content=s;document.documentElement.setAttribute('data-theme',s);}else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches){document.documentElement.setAttribute('data-theme','light');}}catch(e){}})();</script>
   <meta name="wiki-depth" content="2">
   <meta name="wiki-route" content="character/jesse-pinkman">
   <title>Жесси різівый пірень — «Во Все Хуёвые» Wiki</title>
@@ -39,10 +42,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&family=Lora:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../../css/style.css?v=2.6">
+  <link rel="stylesheet" href="../../css/style.css?v=2.7">
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"ProfilePage","name":"Жесси різівый пірень — «Во Все Хуёвые» Wiki","description":"Жесси різівый пірень (также известный как Жесси розовый / Джесси Розовый, поддельное имя — Сеня Аналбаев) — верный, но вечно страдающий напарник Валентина Белинского, варщик мефедрона, беглец и главный герой фильма «Путь розового?».","url":"https://dysh-1789.github.io/Vovsehuyevie/character/jesse-pinkman/","inLanguage":"ru","isPartOf":{"@type":"WebSite","name":"Во Все Хуёвые — Википедия","url":"https://dysh-1789.github.io/Vovsehuyevie/"}}</script>
 </head>
 <body>
+  <div class="scroll-sentinel" id="scrollTopSentinel" aria-hidden="true"></div>
   <!-- Skip Link for Accessibility (WCAG 2.1 AA) -->
   <a href="#contentViewport" class="skip-link">Перейти к основному содержанию</a>
 
@@ -69,7 +73,7 @@
       <div class="header-actions">
         <button type="button" class="header-icon-btn" id="randomArticleBtn" title="Случайная статья" aria-label="Открыть случайную статью">🎲</button>
 
-        <button type="button" class="search-trigger" id="openSearchBtn" aria-label="Открыть быстрый поиск">
+        <button type="button" class="search-trigger" id="openSearchBtn" command="show-modal" commandfor="searchModal" aria-label="Открыть быстрый поиск">
           <span class="search-icon">🔍</span>
           <span class="search-placeholder">Быстрый поиск...</span>
           <kbd class="kbd-shortcut">/</kbd>
@@ -228,13 +232,13 @@
           
             <div class="infobox-row">
               <div class="infobox-label">Первое</div>
-              <div class="infobox-value"><a href="../../episode/pilot-mefedrona/" class="wiki-link wiki-inline-link" data-preview-route="episode/pilot-mefedrona">«Пилот Мефедрона»</a></div>
+              <div class="infobox-value"><a href="../../episode/pilot-mefedrona/" class="wiki-link wiki-inline-link" data-preview-route="episode/pilot-mefedrona" aria-describedby="wikiPreviewPopover">«Пилот Мефедрона»</a></div>
             </div>
           
           
             <div class="infobox-row">
               <div class="infobox-label">Последнее</div>
-              <div class="infobox-value"><a href="../../episode/huelina/" class="wiki-link wiki-inline-link" data-preview-route="episode/huelina">«Хуелина»</a></div>
+              <div class="infobox-value"><a href="../../episode/huelina/" class="wiki-link wiki-inline-link" data-preview-route="episode/huelina" aria-describedby="wikiPreviewPopover">«Хуелина»</a></div>
             </div>
           
           
@@ -262,7 +266,7 @@
               <div class="infobox-label">Принадлежность</div>
               <div class="infobox-value">
                 <ul class="infobox-list">
-                  <li><a href="../../faction/gusev-empire/" class="wiki-link wiki-inline-link" data-preview-route="faction/gusev-empire">Наркоимперия Гусева Ферангия</a> (ранее)</li><li><a href="../../faction/huizenberg-empire/" class="wiki-link wiki-inline-link" data-preview-route="faction/huizenberg-empire">Наркоимперия Хуйзенберга</a> (ранее)</li><li>Наркоимерия Конченного Черта (раб) (ранее)</li>
+                  <li><a href="../../faction/gusev-empire/" class="wiki-link wiki-inline-link" data-preview-route="faction/gusev-empire" aria-describedby="wikiPreviewPopover">Наркоимперия Гусева Ферангия</a> (ранее)</li><li><a href="../../faction/huizenberg-empire/" class="wiki-link wiki-inline-link" data-preview-route="faction/huizenberg-empire" aria-describedby="wikiPreviewPopover">Наркоимперия Хуйзенберга</a> (ранее)</li><li>Наркоимерия Конченного Черта (раб) (ранее)</li>
                 </ul>
               </div>
             </div>
@@ -295,16 +299,18 @@
         
 
         <nav class="wiki-toc toc-box" aria-label="Содержание статьи">
-          <div class="toc-header">
-            <span class="toc-title">Содержание</span>
-            <button type="button" class="toc-toggle-btn" id="tocToggleBtn" aria-expanded="true" aria-controls="tocList">[скрыть]</button>
-          </div>
-          <ol class="toc-list" id="tocList">
-            <li><a href="../../character/jesse-pinkman/?section=sec-overview" class="toc-link" data-scroll-target="sec-overview"><span class="toc-num">1</span>Общие сведения</a></li><li><a href="../../character/jesse-pinkman/?section=sec-biography" class="toc-link" data-scroll-target="sec-biography"><span class="toc-num">2</span>Биография</a></li><li><a href="../../character/jesse-pinkman/?section=sec-personality" class="toc-link" data-scroll-target="sec-personality"><span class="toc-num">3</span>Личность и характер</a></li><li><a href="../../character/jesse-pinkman/?section=sec-relationships" class="toc-link" data-scroll-target="sec-relationships"><span class="toc-num">4</span>Связи и отношения</a></li><li><a href="../../character/jesse-pinkman/?section=sec-trivia" class="toc-link" data-scroll-target="sec-trivia"><span class="toc-num">5</span>Интересные факты</a></li><li><a href="../../character/jesse-pinkman/?section=sec-categories" class="toc-link" data-scroll-target="sec-categories"><span class="toc-num">6</span>Категории</a></li>
-          </ol>
+          <details class="toc-details" open="">
+            <summary class="toc-header">
+              <span class="toc-title">Содержание</span>
+              <span class="toc-toggle-label" aria-hidden="true"></span>
+            </summary>
+            <ol class="toc-list" id="tocList">
+              <li><a href="../../character/jesse-pinkman/?section=sec-overview" class="toc-link target-current" data-scroll-target="sec-overview" aria-current="true"><span class="toc-num">1</span>Общие сведения</a></li><li><a href="../../character/jesse-pinkman/?section=sec-biography" class="toc-link" data-scroll-target="sec-biography"><span class="toc-num">2</span>Биография</a></li><li><a href="../../character/jesse-pinkman/?section=sec-personality" class="toc-link" data-scroll-target="sec-personality"><span class="toc-num">3</span>Личность и характер</a></li><li><a href="../../character/jesse-pinkman/?section=sec-relationships" class="toc-link" data-scroll-target="sec-relationships"><span class="toc-num">4</span>Связи и отношения</a></li><li><a href="../../character/jesse-pinkman/?section=sec-trivia" class="toc-link" data-scroll-target="sec-trivia"><span class="toc-num">5</span>Интересные факты</a></li><li><a href="../../character/jesse-pinkman/?section=sec-categories" class="toc-link" data-scroll-target="sec-categories"><span class="toc-num">6</span>Категории</a></li>
+            </ol>
+          </details>
         </nav>
 
-        <section class="wiki-section" id="sec-overview">
+        <section class="wiki-section" id="sec-overview" tabindex="-1">
           <h2 class="wiki-section-heading">
             <span><span class="mw-headline-number">1.</span> Общие сведения</span>
             <span class="mw-editsection">
@@ -313,11 +319,11 @@
             </span>
           </h2>
           <div class="wiki-section-body">
-            <p><strong class="mw-selflink">Жесси різівый пірень</strong> (также известный как <strong class="mw-selflink">Жесси розовый</strong> / <strong class="mw-selflink">Джесси Розовый</strong>, поддельное имя — <strong class="mw-selflink">Сеня Аналбаев</strong>) — верный, но вечно страдающий напарник <a href="../../character/valentin-belinsky/" class="wiki-link wiki-inline-link" data-preview-route="character/valentin-belinsky">Валентина Белинского</a>, варщик мефедрона, беглец и главный герой фильма <a href="../../episode/put-rozovogo/" class="wiki-link wiki-inline-link" data-preview-route="episode/put-rozovogo">«Путь розового?»</a>.</p>
+            <p><strong class="mw-selflink">Жесси різівый пірень</strong> (также известный как <strong class="mw-selflink">Жесси розовый</strong> / <strong class="mw-selflink">Джесси Розовый</strong>, поддельное имя — <strong class="mw-selflink">Сеня Аналбаев</strong>) — верный, но вечно страдающий напарник <a href="../../character/valentin-belinsky/" class="wiki-link wiki-inline-link" data-preview-route="character/valentin-belinsky" aria-describedby="wikiPreviewPopover">Валентина Белинского</a>, варщик мефедрона, беглец и главный герой фильма <a href="../../episode/put-rozovogo/" class="wiki-link wiki-inline-link" data-preview-route="episode/put-rozovogo" aria-describedby="wikiPreviewPopover">«Путь розового?»</a>.</p>
           </div>
         </section>
 
-        <section class="wiki-section" id="sec-biography">
+        <section class="wiki-section" id="sec-biography" tabindex="-1">
           <h2 class="wiki-section-heading">
             <span><span class="mw-headline-number">2.</span> Биография</span>
             <span class="mw-editsection">
@@ -326,12 +332,12 @@
             </span>
           </h2>
           <div class="wiki-section-body">
-            <p>Бывший ученик школы из <span class="wiki-place-tag">г. Подзалупинск</span> (дом по улице 673). Начинал как варщик мефедрона в трио, после чего варил мефедрон вместе с <a href="../../character/valentin-belinsky/" class="wiki-link wiki-inline-link" data-preview-route="character/valentin-belinsky">Валентином Белинским</a>, работал варщиком в <a href="../../faction/gusev-empire/" class="wiki-link wiki-inline-link" data-preview-route="faction/gusev-empire">Наркоимперии Гусева Ферангия</a> и стал важным членом <a href="../../faction/huizenberg-empire/" class="wiki-link wiki-inline-link" data-preview-route="faction/huizenberg-empire">Наркоимперии Хуйзенберга</a>. Побывал в рабстве у Наркоимперии Конченного Черта, после чего стал беглецом и главным героем полнометражного фильма <a href="../../episode/put-rozovogo/" class="wiki-link wiki-inline-link" data-preview-route="episode/put-rozovogo">«Путь розового?»</a>.</p>
+            <p>Бывший ученик школы из <span class="wiki-place-tag">г. Подзалупинск</span> (дом по улице 673). Начинал как варщик мефедрона в трио, после чего варил мефедрон вместе с <a href="../../character/valentin-belinsky/" class="wiki-link wiki-inline-link" data-preview-route="character/valentin-belinsky" aria-describedby="wikiPreviewPopover">Валентином Белинским</a>, работал варщиком в <a href="../../faction/gusev-empire/" class="wiki-link wiki-inline-link" data-preview-route="faction/gusev-empire" aria-describedby="wikiPreviewPopover">Наркоимперии Гусева Ферангия</a> и стал важным членом <a href="../../faction/huizenberg-empire/" class="wiki-link wiki-inline-link" data-preview-route="faction/huizenberg-empire" aria-describedby="wikiPreviewPopover">Наркоимперии Хуйзенберга</a>. Побывал в рабстве у Наркоимперии Конченного Черта, после чего стал беглецом и главным героем полнометражного фильма <a href="../../episode/put-rozovogo/" class="wiki-link wiki-inline-link" data-preview-route="episode/put-rozovogo" aria-describedby="wikiPreviewPopover">«Путь розового?»</a>.</p>
           </div>
         </section>
 
         
-          <section class="wiki-section" id="sec-personality">
+          <section class="wiki-section" id="sec-personality" tabindex="-1">
             <h2 class="wiki-section-heading">
               <span><span class="mw-headline-number">3.</span> Личность и характер</span>
               <span class="mw-editsection">
@@ -346,7 +352,7 @@
         
 
         
-          <section class="wiki-section" id="sec-relationships">
+          <section class="wiki-section" id="sec-relationships" tabindex="-1">
             <h2 class="wiki-section-heading">
               <span><span class="mw-headline-number">4.</span> Связи и отношения</span>
               <span class="mw-editsection">
@@ -376,7 +382,7 @@
         
 
         
-          <section class="wiki-section" id="sec-trivia">
+          <section class="wiki-section" id="sec-trivia" tabindex="-1">
             <h2 class="wiki-section-heading">
               <span><span class="mw-headline-number">5.</span> Интересные факты</span>
               <span class="mw-editsection">
@@ -386,13 +392,13 @@
             </h2>
             <div class="wiki-section-body">
               <ul>
-                <li>Поддельное имя по документам — <strong class="mw-selflink">Сеня Аналбаев</strong>.</li><li>Роль персонажа исполнили Артем Пшонкин и Санжар Шаймерденов.</li><li>Единственный выживший из высшего руководства синдиката <a href="../../character/valentin-belinsky/" class="wiki-link wiki-inline-link" data-preview-route="character/valentin-belinsky">Хуйзенберга</a>.</li>
+                <li>Поддельное имя по документам — <strong class="mw-selflink">Сеня Аналбаев</strong>.</li><li>Роль персонажа исполнили Артем Пшонкин и Санжар Шаймерденов.</li><li>Единственный выживший из высшего руководства синдиката <a href="../../character/valentin-belinsky/" class="wiki-link wiki-inline-link" data-preview-route="character/valentin-belinsky" aria-describedby="wikiPreviewPopover">Хуйзенберга</a>.</li>
               </ul>
             </div>
           </section>
         
 
-        <div class="wiki-categories-box" id="sec-categories">
+        <div class="wiki-categories-box" id="sec-categories" tabindex="-1">
           <span class="cat-label"><span class="cat-icon">🏷️</span> Категории:</span>
           <ul class="cat-list">
             <li><a href="../../characters/" class="cat-link">Персонажи сериала</a></li><li><a href="../../characters/" class="cat-link">Жители Подзалупинска</a></li><li><a href="../../characters/?status=%D0%96%D0%B8%D0%B2" class="cat-link">Статус: Жив</a></li><li><a href="../../faction/huizenberg-empire/" class="cat-link">Организация: Наркоимперия Хуйзенберга</a></li><li><a href="../../episode/put-rozovogo/" class="cat-link">Фильм «Путь розового?»</a></li><li><a href="../../characters/?q=%D0%91%D0%B5%D0%B3%D0%BB%D0%B5%D1%86" class="cat-link">Беглец</a></li><li><a href="../../" class="cat-link">Канон «Во Все Хуёвые»</a></li>
@@ -400,7 +406,7 @@
         </div>
         
     <nav class="article-pager" aria-label="Навигация по досье персонажей">
-      <a href="../../character/valentin-belinsky/" class="pager-link pager-prev" data-preview-route="character/valentin-belinsky">
+      <a href="../../character/valentin-belinsky/" class="pager-link pager-prev" data-preview-route="character/valentin-belinsky" aria-describedby="wikiPreviewPopover">
         <span class="pager-dir">← Предыдущее досье</span>
         <span class="pager-title">Валентин Белинский</span>
       </a>
@@ -408,7 +414,7 @@
         <span class="pager-dir">Картотека</span>
         <span class="pager-title">Все персонажи (7)</span>
       </a>
-      <a href="../../character/stoyak-belinsky/" class="pager-link pager-next" data-preview-route="character/stoyak-belinsky">
+      <a href="../../character/stoyak-belinsky/" class="pager-link pager-next" data-preview-route="character/stoyak-belinsky" aria-describedby="wikiPreviewPopover">
         <span class="pager-dir">Следующее досье →</span>
         <span class="pager-title">Стояк Белинский</span>
       </a>
@@ -420,13 +426,13 @@
   </main>
 
   <!-- Модальное окно глобального мгновенного поиска -->
-  <div class="modal-overlay hidden" id="searchModal" role="dialog" aria-modal="true" aria-labelledby="searchModalTitle">
+  <dialog class="modal-overlay wiki-dialog" id="searchModal" closedby="any" aria-labelledby="searchModalTitle">
     <div class="search-modal-box">
       <h2 id="searchModalTitle" class="visually-hidden">Поиск по энциклопедии</h2>
       <div class="search-input-wrapper">
         <span class="search-box-icon">🔍</span>
-        <input type="text" id="globalSearchInput" placeholder="Поиск персонажей, псевдонимов, цитат, серий..." autocomplete="off" aria-label="Поиск по энциклопедии" role="combobox" aria-autocomplete="list" aria-controls="searchResultsList" aria-expanded="false">
-        <button type="button" class="modal-close-btn" id="closeSearchBtn" aria-label="Закрыть поиск">&times;</button>
+        <input type="text" id="globalSearchInput" placeholder="Поиск персонажей, псевдонимов, цитат, серий..." autocomplete="off" autofocus aria-label="Поиск по энциклопедии" role="combobox" aria-autocomplete="list" aria-controls="searchResultsList" aria-expanded="false">
+        <button type="button" class="modal-close-btn" id="closeSearchBtn" command="close" commandfor="searchModal" aria-label="Закрыть поиск">&times;</button>
       </div>
       <div class="search-filters-row">
         <span class="filter-label">Фильтр:</span>
@@ -442,17 +448,17 @@
         <span>Клавиши: <kbd>↑</kbd> <kbd>↓</kbd> выбор, <kbd>Enter</kbd> перейти, <kbd>ESC</kbd> закрыть</span>
       </div>
     </div>
-  </div>
+  </dialog>
 
   <!-- Модальное окно: Архитектура статьи (Спецификация и стандарты Вики) -->
-  <div class="modal-overlay hidden" id="architectureModal" role="dialog" aria-modal="true" aria-labelledby="archModalTitle">
+  <dialog class="modal-overlay wiki-dialog" id="architectureModal" closedby="any" aria-labelledby="archModalTitle">
     <div class="arch-modal-box">
       <div class="modal-header">
         <div class="modal-header-info">
           <div class="modal-badge">📐 Архитектура вики-статьи</div>
           <h3 id="archModalTitle">Пошаговый план структуры статьи</h3>
         </div>
-        <button type="button" class="modal-close-btn" id="closeArchModalBtn" title="Закрыть" aria-label="Закрыть модальное окно">&times;</button>
+        <button type="button" class="modal-close-btn" id="closeArchModalBtn" command="close" commandfor="architectureModal" title="Закрыть" aria-label="Закрыть модальное окно">&times;</button>
       </div>
 
       <div class="modal-tabs" role="tablist" aria-label="Выбор типа статьи">
@@ -512,8 +518,16 @@
         <button type="button" class="btn btn-secondary" id="copyArchPlanBtn">
           <span class="btn-icon">📋</span> Скопировать план
         </button>
-        <button type="button" class="btn btn-primary" id="closeArchModalBtn2">Понятно, закрыть</button>
+        <button type="button" class="btn btn-primary" id="closeArchModalBtn2" command="close" commandfor="architectureModal">Понятно, закрыть</button>
       </div>
+    </div>
+  </dialog>
+
+  <!-- Область тост-уведомлений (Top Layer Popover) -->
+  <div class="wiki-toast-region" id="wikiToastRegion" role="region" aria-label="Уведомления">
+    <div id="wikiToast" class="wiki-toast" popover="manual" role="status" aria-live="polite">
+      <span class="wiki-toast-text" id="wikiToastText"></span>
+      <button type="button" class="wiki-toast-close" id="wikiToastCloseBtn" popovertarget="wikiToast" popovertargetaction="hide" aria-label="Закрыть уведомление">&times;</button>
     </div>
   </div>
 
@@ -539,21 +553,21 @@
       <div class="footer-col" id="footerEditingCol">
         <h4>Редактирование</h4>
         <p>Каноничная база знаний защищена от произвольных правок. Для ознакомления со стандартом оформления и структурой страниц используйте спецификацию:</p>
-        <button type="button" class="btn btn-secondary btn-arch-footer" id="openArchitectureBtn">
+        <button type="button" class="btn btn-secondary btn-arch-footer" id="openArchitectureBtn" command="show-modal" commandfor="architectureModal">
           <span class="btn-icon">📐</span>
           <span>Архитектура статьи</span>
         </button>
       </div>
     </div>
     <div class="footer-bottom">
-      <p>&copy; Энциклопедия «Во Все Хуёвые». Версия базы v2.6.</p>
+      <p>&copy; Энциклопедия «Во Все Хуёвые». Версия базы v2.7.</p>
     </div>
   </footer>
 
   <button type="button" class="back-to-top-btn" id="backToTopBtn" aria-label="Наверх">↑ Наверх</button>
 
   <!-- Скрипты приложения -->
-  <script src="../../js/data.js?v=2.6"></script>
-  <script src="../../js/app.js?v=2.6"></script>
+  <script src="../../js/data.js?v=2.7" defer></script>
+  <script src="../../js/app.js?v=2.7" defer fetchpriority="high"></script>
 </body>
 </html>

@@ -59,7 +59,7 @@ async function runTier3Tests(reporter) {
     input.dispatchEvent({ type: 'keydown', key: 'Enter', bubbles: true, preventDefault: () => {} });
 
     const modal = env.document.getElementById('searchModal');
-    assert.equal(modal.classList.contains('hidden'), true, 'Modal must close on Enter');
+    assert.equal(modal.open, false, 'Modal must close on Enter');
     assert.equal(env.window.location.pathname, '/Vovsehuyevie/character/stoyak-belinsky/', 'Pathname must navigate to character without #');
     assert.equal(env.window.location.hash, '', 'URL must not contain # fragment');
   } catch (e) {

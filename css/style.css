@@ -4,7 +4,7 @@
    ========================================================================== */
 
 :root {
-  color-scheme: dark;
+  color-scheme: light dark;
   /* Color Palette - Dark Theme (Default) */
   --bg-primary: #0f1117;
   --bg-secondary: #171b26;
@@ -42,6 +42,14 @@
   --status-missing-text: #fbbf24;
   --status-missing-border: #d97706;
 
+  /* Native browser UI tokens (>= 3:1 scrollbar thumb contrast against track) */
+  --scrollbar-track-light: #e5e7eb;
+  --scrollbar-thumb-light: #5c6470;
+  --scrollbar-track-dark: #151824;
+  --scrollbar-thumb-dark: #6b768d;
+  --scrollbar-track: var(--scrollbar-track-dark);
+  --scrollbar-thumb: var(--scrollbar-thumb-dark);
+
   /* Typography */
   --font-heading: 'Lora', 'Georgia', 'Linux Libertine', 'Times New Roman', serif;
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -56,6 +64,16 @@
   --radius-lg: 12px;
 
   --header-height: 64px;
+  accent-color: var(--accent-primary);
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+:root:has(> head > meta[name="color-scheme"][content="dark"]) {
+  color-scheme: dark;
+}
+
+:root:has(> head > meta[name="color-scheme"][content="light"]) {
+  color-scheme: light;
 }
 
 /* Light Theme Variables (Wikipedia Vector Skin Authentic) */
@@ -91,6 +109,23 @@
   --status-active-text: #15803d; /* 5.02:1 WCAG AA contrast */
   --status-deceased-text: #b91c1c; /* 6.47:1 WCAG AA contrast */
   --status-missing-text: #b45309; /* 5.02:1 WCAG AA contrast */
+
+  --scrollbar-track: var(--scrollbar-track-light);
+  --scrollbar-thumb: var(--scrollbar-thumb-light);
+}
+
+@supports (color: light-dark(white, black)) {
+  :root {
+    --scrollbar-track: light-dark(var(--scrollbar-track-light), var(--scrollbar-track-dark));
+    --scrollbar-thumb: light-dark(var(--scrollbar-thumb-light), var(--scrollbar-thumb-dark));
+    accent-color: light-dark(#3366cc, #3b82f6);
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+}
+
+::selection {
+  background-color: var(--accent-glow);
+  color: var(--text-primary);
 }
 
 /* Base Resets */
@@ -100,17 +135,52 @@
   padding: 0;
 }
 
+.scroll-sentinel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 320px;
+  pointer-events: none;
+  visibility: hidden;
+}
+
 body {
+  position: relative;
   font-family: var(--font-body);
+  font-size-adjust: from-font;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   line-height: 1.65;
-  font-size: 15px;
+  font-size: 0.9375rem;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  overflow-x: clip;
+}
+
+h1, h2, h3,
+.portal-title,
+.article-title,
+.wiki-section-heading,
+.card-title {
+  text-wrap: balance;
+  font-size-adjust: from-font;
+}
+
+.article-container p,
+.wiki-section-body p,
+.card-overview,
+.portal-desc,
+.timeline-desc {
+  text-wrap: pretty;
+  overflow-wrap: break-word;
+}
+
+code, kbd, .wiki-super, .toc-num {
+  font-size-adjust: from-font;
 }
 
 a {
@@ -516,7 +586,7 @@ button.search-trigger {
 
 .portal-title {
   font-family: var(--font-heading);
-  font-size: 32px;
+  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
   font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 8px;
@@ -1189,10 +1259,11 @@ a.status-stamp-other:focus-visible {
 
 .article-title {
   font-family: var(--font-heading);
-  font-size: 32px;
+  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.2;
+  width: fit-content;
 }
 
 .article-subheading {
@@ -1410,6 +1481,14 @@ a.status-stamp-other:focus-visible {
   box-shadow: var(--shadow-sm);
 }
 
+.wiki-toc {
+  scroll-target-group: auto;
+}
+
+.toc-details {
+  margin: 0;
+}
+
 .toc-header {
   display: flex;
   align-items: center;
@@ -1418,6 +1497,18 @@ a.status-stamp-other:focus-visible {
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 6px;
   margin-bottom: 10px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.toc-header::-webkit-details-marker {
+  display: none;
+}
+
+.toc-details:not([open]) .toc-header {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
 }
 
 .toc-title {
@@ -1429,7 +1520,8 @@ a.status-stamp-other:focus-visible {
   color: var(--text-primary);
 }
 
-.toc-toggle-btn {
+.toc-toggle-btn,
+.toc-toggle-label {
   background: none;
   border: none;
   color: var(--wiki-link);
@@ -1439,6 +1531,15 @@ a.status-stamp-other:focus-visible {
   font-family: var(--font-body);
 }
 
+.toc-toggle-label::before {
+  content: '[показать]';
+}
+
+.toc-details[open] .toc-toggle-label::before {
+  content: '[скрыть]';
+}
+
+.toc-header:hover .toc-toggle-label,
 .toc-toggle-btn:hover {
   text-decoration: underline;
 }
@@ -1458,6 +1559,16 @@ a.status-stamp-other:focus-visible {
   color: var(--wiki-link);
   display: inline-flex;
   align-items: baseline;
+  border-left: 2px solid transparent;
+  padding-left: 6px;
+  margin-left: -8px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.wiki-toc a:is(:target-current, .target-current) {
+  color: var(--accent-text);
+  font-weight: 700;
+  border-left-color: var(--accent-primary);
 }
 
 .toc-num {
@@ -2041,19 +2152,65 @@ a.status-stamp-other:focus-visible {
    MODALS (SEARCH & ARCHITECTURE)
    ========================================================================== */
 
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.7);
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
-  z-index: 200;
+/* Native <dialog> Modals (Top Layer, Focus Trap & Esc handled by browser) */
+dialog.wiki-dialog {
+  border: none;
+  background: transparent;
+  padding: 20px;
+  margin: auto;
+  max-width: 100vw;
+  max-height: 100dvh;
+  width: fit-content;
+  color: var(--text-primary);
+  overflow: visible;
+  opacity: 0;
+  transform: scale(0.97) translateY(8px);
+}
+
+dialog.wiki-dialog[open] {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
   opacity: 1;
-  transition: opacity 0.2s ease;
+  transform: scale(1) translateY(0);
+}
+
+dialog.wiki-dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog.wiki-dialog::backdrop {
+  background-color: rgba(0, 0, 0, 0.7);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  overflow: hidden;
+  overscroll-behavior: contain;
+  opacity: 0;
+}
+
+dialog.wiki-dialog[open]::backdrop {
+  opacity: 1;
+}
+
+@starting-style {
+  dialog.wiki-dialog[open] {
+    opacity: 0;
+    transform: scale(0.97) translateY(8px);
+  }
+  dialog.wiki-dialog[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  dialog.wiki-dialog {
+    transition: opacity 0.2s ease, transform 0.2s ease, display 0.2s, overlay 0.2s;
+    transition-behavior: allow-discrete;
+  }
+  dialog.wiki-dialog::backdrop {
+    transition: opacity 0.2s ease, display 0.2s, overlay 0.2s;
+    transition-behavior: allow-discrete;
+  }
 }
 
 .modal-overlay.hidden {
@@ -2412,7 +2569,7 @@ mark.search-highlight {
   color: #ffffff;
 }
 
-/* Back-to-top floating button */
+/* Back-to-top floating button (Scroll Position Aware + IntersectionObserver fallback) */
 .back-to-top-btn {
   position: fixed;
   bottom: 24px;
@@ -2423,21 +2580,38 @@ mark.search-highlight {
   border: 1px solid var(--border-light);
   border-radius: 999px;
   padding: 9px 14px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   font-family: var(--font-body);
   cursor: pointer;
   box-shadow: var(--shadow-md);
+  visibility: hidden;
   opacity: 0;
   pointer-events: none;
-  transform: translateY(10px);
-  transition: opacity 0.2s ease, transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+  translate: 0 10px;
+  transition: visibility 0.2s, opacity 0.2s ease, translate 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
 }
 
 .back-to-top-btn.visible {
+  visibility: visible;
   opacity: 1;
   pointer-events: auto;
-  transform: translateY(0);
+  translate: 0 0;
+}
+
+@supports (container-type: scroll-state) {
+  html {
+    container-type: scroll-state;
+  }
+
+  @container scroll-state(scrollable: top) {
+    .back-to-top-btn {
+      visibility: visible;
+      opacity: 1;
+      pointer-events: auto;
+      translate: 0 0;
+    }
+  }
 }
 
 .back-to-top-btn:hover {
@@ -2445,29 +2619,76 @@ mark.search-highlight {
   background: var(--bg-tertiary);
 }
 
-/* Toast popup */
+/* Toast popup (Top Layer popover="manual" inside named region) */
+.wiki-toast-region {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 300;
+}
+
 .wiki-toast {
   position: fixed;
-  bottom: 72px;
-  right: 24px;
+  inset: auto 24px 72px auto;
+  margin: 0;
   background: var(--bg-secondary);
   color: var(--text-primary);
   border: 1px solid var(--border-light);
   border-left: 4px solid var(--accent-primary);
-  padding: 12px 20px;
+  padding: 12px 14px 12px 18px;
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
-  font-size: 13.5px;
-  z-index: 300;
+  font-size: 0.875rem;
+  max-width: min(420px, calc(100vw - 32px));
+  display: none;
+  align-items: center;
+  gap: 12px;
   opacity: 0;
-  transform: translateY(12px);
-  pointer-events: none;
-  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  translate: 0 12px;
+  pointer-events: auto;
 }
 
-.wiki-toast.visible {
+.wiki-toast:is(:popover-open, .\:popover-open, .visible) {
+  display: flex;
   opacity: 1;
-  transform: translateY(0);
+  translate: 0 0;
+}
+
+@starting-style {
+  .wiki-toast:is(:popover-open, .visible) {
+    opacity: 0;
+    translate: 0 12px;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .wiki-toast {
+    transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), translate 0.25s cubic-bezier(0.16, 1, 0.3, 1), display 0.25s, overlay 0.25s;
+    transition-behavior: allow-discrete;
+  }
+}
+
+.wiki-toast-text {
+  flex: 1;
+  overflow-wrap: break-word;
+}
+
+.wiki-toast-close {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 1.125rem;
+  line-height: 1;
+  padding: 2px 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.wiki-toast-close:hover {
+  color: var(--text-primary);
+  border-color: var(--border-color);
 }
 
 .wiki-counter-badge {
@@ -2560,22 +2781,38 @@ mark.search-highlight {
    MODERN UX ENHANCEMENTS: PROGRESS BAR, BIO SUBHEADS, LIGHTBOX, PREVIEW, PAGER
    ========================================================================== */
 
-/* Reading Progress Bar */
+/* Reading Progress Bar (Compositor-only scaleX + CSS Scroll-Driven Animation) */
 .reading-progress-bar {
   position: fixed;
   top: 0;
   left: 0;
   height: 3px;
-  width: 0%;
+  width: 100%;
   background: linear-gradient(90deg, var(--accent-primary), #60a5fa, #34d399);
   z-index: 400;
   pointer-events: none;
   opacity: 0;
-  transition: width 0.12s linear, opacity 0.2s ease;
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  transition: opacity 0.2s ease;
 }
 
 .reading-progress-bar.active {
   opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    @keyframes wikiReadingProgress {
+      from { transform: scaleX(0); }
+      to { transform: scaleX(1); }
+    }
+
+    .reading-progress-bar.active {
+      animation: wikiReadingProgress auto linear;
+      animation-timeline: scroll(root block);
+    }
+  }
 }
 
 /* Structured Biography Sub-headings */
@@ -2630,18 +2867,15 @@ mark.search-highlight {
   transform: translateY(0);
 }
 
-/* Full-Resolution Portrait Lightbox */
+/* Full-Resolution Portrait Lightbox (Native <dialog>) */
 .lightbox-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 350;
-  background: rgba(8, 10, 15, 0.86);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   padding: 24px;
-  animation: wikiViewEnter 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lightbox-overlay::backdrop {
+  background: rgba(8, 10, 15, 0.86);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 
 .lightbox-box {
@@ -2778,35 +3012,73 @@ a.pager-link:hover {
   color: var(--text-primary);
 }
 
-/* Wikipedia-Style Hover Preview Popover */
+/* Wikipedia-Style Interactive Hovercard (Top Layer Popover + CSS Anchor Positioning) */
 .wiki-preview-popover {
   position: fixed;
   z-index: 320;
-  width: 320px;
+  width: min(320px, calc(100vw - 24px));
   background: var(--bg-secondary);
+  color: var(--text-primary);
   border: 1px solid var(--border-light);
   border-top: 3px solid var(--accent-primary);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   padding: 12px 14px;
-  pointer-events: none;
+  pointer-events: auto;
   opacity: 0;
   transform: translateY(6px);
-  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.wiki-preview-popover:not([popover]) {
+  display: none;
+}
+
+.wiki-preview-popover:not([popover]).visible {
+  display: block;
 }
 
 .wiki-preview-popover.above {
   transform: translateY(-100%) translateY(-6px);
 }
 
-.wiki-preview-popover.visible {
+.wiki-preview-popover:is(:popover-open, .\:popover-open, .visible) {
   opacity: 1;
   transform: translateY(0);
 }
 
-.wiki-preview-popover.above.visible {
+.wiki-preview-popover.above:is(:popover-open, .\:popover-open, .visible) {
   opacity: 1;
   transform: translateY(-100%);
+}
+
+@starting-style {
+  .wiki-preview-popover:is(:popover-open, .visible) {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .wiki-preview-popover {
+    transition: opacity 0.16s ease, transform 0.16s ease, display 0.16s, overlay 0.16s;
+    transition-behavior: allow-discrete;
+  }
+}
+
+/* Progressive enhancement: native CSS Anchor Positioning gated behind @supports */
+@supports (position-area: block-end) and (anchor-name: --a) {
+  .wiki-preview-anchor-active {
+    anchor-name: --wiki-preview-anchor;
+  }
+
+  .wiki-preview-popover.uses-anchor-pos {
+    position-anchor: --wiki-preview-anchor;
+    inset: auto;
+    margin: 8px 0;
+    position-area: block-end span-inline-end;
+    position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+    transform: translateY(0);
+  }
 }
 
 .preview-pop-header {
@@ -3003,12 +3275,9 @@ a.pager-link:hover {
     order: 3;
     width: 100%;
     overflow-x: auto;
-    scrollbar-width: none;
-    padding-bottom: 2px;
-  }
-
-  .main-nav::-webkit-scrollbar {
-    display: none;
+    scrollbar-width: auto;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+    padding-bottom: 4px;
   }
 
   .graph-layout-grid {
@@ -3053,12 +3322,9 @@ a.pager-link:hover {
     overflow-y: hidden;
     gap: 6px;
     padding-bottom: 4px;
-    scrollbar-width: none;
+    scrollbar-width: auto;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
     -webkit-overflow-scrolling: touch;
-  }
-
-  .main-nav::-webkit-scrollbar {
-    display: none;
   }
 
   .main-nav .nav-btn {
@@ -3120,14 +3386,10 @@ a.pager-link:hover {
     border-bottom: 1px solid var(--border-color);
     overflow-x: auto;
     overflow-y: hidden;
-    scrollbar-width: none;
+    scrollbar-width: auto;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
     gap: 6px;
     padding-bottom: 0;
-  }
-
-  .wiki-page-tabs-left::-webkit-scrollbar,
-  .wiki-page-tabs-right::-webkit-scrollbar {
-    display: none;
   }
 
   .wiki-page-tab.active {
@@ -3187,14 +3449,6 @@ a.pager-link:hover {
     padding: 24px 16px;
   }
 
-  .portal-title {
-    font-size: 24px;
-  }
-
-  .article-title {
-    font-size: 24px;
-  }
-
   .article-container {
     padding: 16px 10px;
   }
@@ -3208,10 +3462,8 @@ a.pager-link:hover {
   }
 
   .wiki-toast {
-    left: 16px;
-    right: 16px;
-    bottom: 64px;
-    max-width: calc(100% - 32px);
+    inset: auto 16px 64px 16px;
+    max-width: calc(100vw - 32px);
   }
 
   .article-pager {
@@ -3225,6 +3477,47 @@ a.pager-link:hover {
   }
 }
 
+/* ==========================================================================
+   VIEW TRANSITIONS (SPA + MPA) & BELOW-THE-FOLD CONTENT VISIBILITY
+   ========================================================================== */
+
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+}
+
+.vt-hero-portrait {
+  view-transition-name: hero-portrait;
+}
+
+::view-transition-old(hero-portrait),
+::view-transition-new(hero-portrait) {
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Deferred rendering strictly for below-the-fold heavy sections */
+.wiki-footer {
+  content-visibility: auto;
+  contain-intrinsic-size: auto none auto 240px;
+}
+
+.wiki-section:nth-of-type(n+3) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto none auto 360px;
+}
+
+.timeline-item:nth-of-type(n+4) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto none auto 160px;
+}
+
+.cards-grid .wiki-card:nth-child(n+5) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto none auto 300px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -3233,6 +3526,71 @@ a.pager-link:hover {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+/* ==========================================================================
+   FORCED COLORS MODE (WINDOWS HIGH CONTRAST ACCESSIBILITY)
+   ========================================================================== */
+
+@media (forced-colors: active) {
+  .wiki-card,
+  .wiki-infobox,
+  .toc-box,
+  .wiki-toc,
+  .status-badge,
+  .wiki-status-stamp,
+  .meta-pill,
+  .filter-chip,
+  .dir-quick-chip,
+  .search-modal-box,
+  .arch-modal-box,
+  .lightbox-box,
+  .wiki-toast,
+  .wiki-preview-popover,
+  .back-to-top-btn,
+  .pager-link,
+  .episode-card {
+    border: 1px solid CanvasText;
+  }
+
+  .nav-btn.active,
+  .filter-chip.active,
+  .dir-quick-chip.active,
+  .btn-primary,
+  .modal-tab.active,
+  .wiki-toc a:is(:target-current, .target-current) {
+    border: 2px solid Highlight;
+    color: HighlightText;
+    background-color: Highlight;
+  }
+
+  .reading-progress-bar {
+    background: Highlight;
+    border-bottom: 3px solid Highlight;
+  }
+
+  :focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+
+  .graph-node circle,
+  .graph-node rect {
+    stroke: CanvasText;
+    stroke-width: 2px;
+  }
+
+  .graph-node.selected circle,
+  .graph-node.selected rect {
+    stroke: Highlight;
+    stroke-width: 3px;
   }
 }
 
@@ -3245,7 +3603,8 @@ a.pager-link:hover {
   .wiki-footer,
   .back-to-top-btn,
   .reading-progress-bar,
-  .wiki-preview-popover {
+  .wiki-preview-popover,
+  .wiki-toast-region {
     display: none !important;
   }
 

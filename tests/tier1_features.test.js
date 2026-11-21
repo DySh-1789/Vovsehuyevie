@@ -199,13 +199,14 @@ async function runTier1Tests(reporter) {
   // -------------------------------------------------------------------------
   reporter.startSuite('Feature 3: Search Modal Keyboard Navigation', 'ArrowUp, ArrowDown, and Enter result selection');
 
-  reporter.startTest('Search modal opens and binds keyboard handler');
+  reporter.startTest('Search modal opens as native <dialog> and binds keyboard handler');
   try {
     const env = createBrowserEnvironment();
     env.click('#openSearchBtn');
     const modal = env.document.getElementById('searchModal');
     assert.ok(modal, 'searchModal must exist');
-    assert.equal(modal.classList.contains('hidden'), false, 'Search modal should be visible');
+    assert.equal(modal.tagName, 'DIALOG', 'searchModal should be a native <dialog> element');
+    assert.equal(modal.open, true, 'Search <dialog> should be open');
   } catch (e) {
     if (e.name !== 'AssertionError') throw e;
   }
@@ -269,18 +270,22 @@ async function runTier1Tests(reporter) {
   }
   reporter.endTest();
 
-  reporter.startTest('Pressing Enter on selected result navigates to article and closes modal without #');
+  reporter.startTest('Pressing Enter during IME composition does not submit prematurely, normal Enter closes <dialog> and navigates without #');
   try {
     const env = createBrowserEnvironment();
     env.click('#openSearchBtn');
     env.type('#globalSearchInput', 'Белинский');
 
     const input = env.document.getElementById('globalSearchInput');
-    input.dispatchEvent({ type: 'keydown', key: 'ArrowDown', bubbles: true, preventDefault: () => {} });
-    input.dispatchEvent({ type: 'keydown', key: 'Enter', bubbles: true, preventDefault: () => {} });
-
     const modal = env.document.getElementById('searchModal');
-    assert.equal(modal.classList.contains('hidden'), true, 'Modal should close after Enter selection');
+    input.dispatchEvent({ type: 'keydown', key: 'ArrowDown', bubbles: true, preventDefault: () => {} });
+    // IME composition Enter must be ignored
+    input.dispatchEvent({ type: 'keydown', key: 'Enter', isComposing: true, bubbles: true, preventDefault: () => {} });
+    assert.equal(modal.open, true, 'Modal must stay open during IME composition Enter');
+
+    input.dispatchEvent({ type: 'keydown', key: 'Enter', isComposing: false, keyCode: 13, bubbles: true, preventDefault: () => {} });
+
+    assert.equal(modal.open, false, 'Modal should close after Enter selection');
     assert.includes(env.window.location.pathname, '/character/', 'URL pathname should navigate to selected character without #');
     assert.equal(env.window.location.hash, '', 'URL hash must remain empty');
   } catch (e) {
@@ -1109,13 +1114,17 @@ async function runTier1Tests(reporter) {
   }
   reporter.endTest();
 
-  reporter.startTest('#searchModal and #architectureModal expose proper ARIA dialog, listbox, and tablist roles');
+  reporter.startTest('#searchModal and #architectureModal use native <dialog> elements with listbox and tablist roles');
   try {
     const env = createBrowserEnvironment();
     const modal = env.document.getElementById('searchModal');
-    assert.ok(modal, '#searchModal must exist');
-    assert.equal(modal.getAttribute('role'), 'dialog', '#searchModal should have role="dialog"');
-    assert.equal(modal.getAttribute('aria-modal'), 'true', '#searchModal should have aria-modal="true"');
+    const archModal = env.document.getElementById('architectureModal');
+    assert.ok(modal && archModal, '#searchModal and #architectureModal must exist');
+    assert.equal(modal.tagName, 'DIALOG', '#searchModal must be a native <dialog>');
+    assert.equal(archModal.tagName, 'DIALOG', '#architectureModal must be a native <dialog>');
+    assert.equal(modal.getAttribute('closedby'), 'any', '#searchModal should set closedby="any"');
+    assert.equal(modal.getAttribute('role'), null, 'Native <dialog> must not duplicate role="dialog"');
+    assert.equal(modal.getAttribute('aria-modal'), null, 'Native <dialog> must not set redundant aria-modal');
 
     const listbox = env.document.getElementById('searchResultsList');
     assert.equal(listbox.getAttribute('role'), 'listbox', '#searchResultsList must have role="listbox"');
@@ -1362,6 +1371,93 @@ async function runTier1Tests(reporter) {
   reporter.startTest('tests/tier4_scenarios.test.js exists at specified path');
   try {
     assert.ok(fileExists('tests/tier4_scenarios.test.js'), 'tests/tier4_scenarios.test.js must exist');
+  } catch (e) {
+    if (e.name !== 'AssertionError') throw e;
+  }
+  reporter.endTest();
+
+  reporter.endSuite();
+
+  // -------------------------------------------------------------------------
+  // Feature 19: Modern Web Guidance Compliance
+  // -------------------------------------------------------------------------
+  reporter.startSuite('Feature 19: Modern Web Guidance Compliance', 'Native dialogs, popovers, scroll-driven animations, view transitions, typography & a11y');
+
+  reporter.startTest('Head declares color-scheme, text-scale, FOUC-prevention script, and deferred script priority');
+  try {
+    const html = getHTMLContent();
+    assert.includes(html, '<meta name="color-scheme" content="light dark">', 'Must declare color-scheme meta');
+    assert.includes(html, '<meta name="text-scale" content="scale">', 'Must opt into OS text scaling');
+    assert.includes(html, 'js/data.js?v=2.7" defer>', 'data.js must load with defer');
+    assert.includes(html, 'js/app.js?v=2.7" defer fetchpriority="high">', 'app.js must load with defer and fetchpriority="high"');
+  } catch (e) {
+    if (e.name !== 'AssertionError') throw e;
+  }
+  reporter.endTest();
+
+  reporter.startTest('CSS adopts light-dark(), typography legibility, scroll-driven progress, view transitions, forced-colors, and content-visibility');
+  try {
+    const css = getCSSContent();
+    assert.includes(css, 'color-scheme: light dark;', ':root must declare color-scheme: light dark');
+    assert.includes(css, 'light-dark(', 'CSS should use light-dark() for native browser UI theming');
+    assert.includes(css, 'font-size-adjust: from-font;', 'CSS should normalize font fallbacks with font-size-adjust');
+    assert.includes(css, 'text-wrap: balance;', 'Headings should use text-wrap: balance');
+    assert.includes(css, 'text-wrap: pretty;', 'Reading prose should use text-wrap: pretty');
+    assert.includes(css, 'overscroll-behavior: contain;', 'Native dialogs and backdrops must contain scroll');
+    assert.includes(css, 'animation-timeline: scroll(root block);', 'Reading progress bar must use scroll-driven animation');
+    assert.includes(css, '@view-transition', 'CSS must opt into cross-document view transitions');
+    assert.includes(css, '@media (forced-colors: active)', 'CSS must support Windows High Contrast (Forced Colors Mode)');
+    assert.includes(css, 'content-visibility: auto;', 'Below-the-fold sections should use content-visibility: auto');
+    assert.includes(css, 'contain-intrinsic-size:', 'content-visibility: auto must pair with contain-intrinsic-size');
+    assert.equal(/scrollbar-width:\s*none/i.test(css), false, 'Must not hide scrollbars with scrollbar-width: none without alternative controls');
+  } catch (e) {
+    if (e.name !== 'AssertionError') throw e;
+  }
+  reporter.endTest();
+
+  reporter.startTest('Article TOC uses native searchable <details open> and focusable sections with tabindex="-1"');
+  try {
+    const env = createBrowserEnvironment();
+    env.navigate('character/valentin-belinsky');
+    const details = env.document.querySelector('.wiki-toc details.toc-details');
+    assert.ok(details, 'Character TOC should use native <details class="toc-details">');
+    assert.equal(details.hasAttribute('open'), true, 'TOC <details> should default to open');
+    const secBio = env.document.getElementById('sec-biography');
+    assert.ok(secBio, '#sec-biography must exist');
+    assert.equal(secBio.getAttribute('tabindex'), '-1', 'Article sections must have tabindex="-1" for accessible anchor focus');
+  } catch (e) {
+    if (e.name !== 'AssertionError') throw e;
+  }
+  reporter.endTest();
+
+  reporter.startTest('Toast uses Top Layer popover="manual" inside named region with close button');
+  try {
+    const env = createBrowserEnvironment();
+    const region = env.document.getElementById('wikiToastRegion');
+    const toast = env.document.getElementById('wikiToast');
+    const closeBtn = env.document.getElementById('wikiToastCloseBtn');
+    assert.ok(region && toast && closeBtn, 'Toast region, toast, and close button must exist');
+    assert.equal(region.getAttribute('role'), 'region', 'Toast container must be a named region');
+    assert.equal(toast.getAttribute('popover'), 'manual', 'Toast must use popover="manual"');
+    assert.equal(closeBtn.getAttribute('popovertargetaction'), 'hide', 'Toast close button must use popovertargetaction="hide"');
+  } catch (e) {
+    if (e.name !== 'AssertionError') throw e;
+  }
+  reporter.endTest();
+
+  reporter.startTest('Hovercard preview uses popover="hint" and wires aria-describedby on preview links');
+  try {
+    const env = createBrowserEnvironment();
+    env.navigate('character/valentin-belinsky');
+    const previewLink = env.document.querySelector('[data-preview-route]');
+    assert.ok(previewLink, 'Character article must have preview links');
+    assert.equal(previewLink.getAttribute('aria-describedby'), 'wikiPreviewPopover', 'Preview links must reference #wikiPreviewPopover via aria-describedby');
+    env.eval(`showWikiPreviewPopover(document.querySelector('[data-preview-route]'), 'character/jesse-pinkman')`);
+    const pop = env.document.getElementById('wikiPreviewPopover');
+    assert.ok(pop, '#wikiPreviewPopover must be created');
+    assert.equal(pop.getAttribute('popover'), 'hint', 'Hovercard must use popover="hint"');
+    assert.equal(pop.getAttribute('role'), 'tooltip', 'Hovercard must expose role="tooltip"');
+    assert.equal(pop.getAttribute('aria-hidden'), null, 'Hovercard must not be aria-hidden');
   } catch (e) {
     if (e.name !== 'AssertionError') throw e;
   }

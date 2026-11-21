@@ -553,6 +553,52 @@ class DOMElement extends DOMNode {
     // Simulated no-op for headless testing
   }
 
+  get open() {
+    return this.hasAttribute('open');
+  }
+
+  set open(val) {
+    if (val) {
+      this.setAttribute('open', '');
+    } else {
+      this.removeAttribute('open');
+    }
+  }
+
+  showModal() {
+    this.setAttribute('open', '');
+    this._isModal = true;
+  }
+
+  close(returnValue) {
+    if (returnValue !== undefined) this.returnValue = String(returnValue);
+    const wasOpen = this.hasAttribute('open');
+    this.removeAttribute('open');
+    this._isModal = false;
+    if (wasOpen) {
+      this.dispatchEvent({ type: 'close', bubbles: false, cancelable: false });
+    }
+  }
+
+  showPopover() {
+    this._popoverOpen = true;
+    this.dispatchEvent({ type: 'toggle', newState: 'open', oldState: 'closed', bubbles: false });
+  }
+
+  hidePopover() {
+    this._popoverOpen = false;
+    this.dispatchEvent({ type: 'toggle', newState: 'closed', oldState: 'open', bubbles: false });
+  }
+
+  contains(node) {
+    let cur = node;
+    while (cur) {
+      if (cur === this) return true;
+      cur = cur.parentNode;
+    }
+    return false;
+  }
+
   get innerHTML() {
     return serializeNodesToHTML(this.childNodes);
   }
@@ -978,7 +1024,7 @@ function createBrowserEnvironment(options = {}) {
         writeText: () => Promise.resolve()
       }
     },
-    matchMedia: () => ({ matches: false, addListener() {}, removeListener() {} }),
+    matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} }),
     history: {
       get length() {
         return historyStack.length;
