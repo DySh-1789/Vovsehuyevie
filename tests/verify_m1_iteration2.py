@@ -8,7 +8,7 @@ import re
 import xml.etree.ElementTree as ET
 from html.parser import HTMLParser
 
-ROOT_DIR = "/home/antigravity/sanzharshaymerdenov5-collab/Vovsehuyevie"
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 with open(os.path.join(ROOT_DIR, "index.html"), "r", encoding="utf-8") as f:
     html_content = f.read()
@@ -186,7 +186,7 @@ test("robots.txt has Allow: /",
      "Allow: /" in robots_content)
 
 test("robots.txt has Sitemap directive pointing to sitemap.xml",
-     "Sitemap: https://sanzharshaymerdenov5-collab.github.io/Vovsehuyevie/sitemap.xml" in robots_content)
+     "Sitemap: https://dysh-1789.github.io/Vovsehuyevie/sitemap.xml" in robots_content)
 
 # Sitemap validation
 sitemap_valid = False
@@ -197,7 +197,7 @@ try:
     urls = root.findall("sm:url", ns)
     url_count = len(urls)
     locs = [u.find("sm:loc", ns).text for u in urls if u.find("sm:loc", ns) is not None]
-    all_https = all(loc.startswith("https://sanzharshaymerdenov5-collab.github.io/Vovsehuyevie/") for loc in locs)
+    all_https = all(loc.startswith("https://dysh-1789.github.io/Vovsehuyevie/") for loc in locs)
     has_priorities = all(0.0 <= float(u.find("sm:priority", ns).text) <= 1.0 for u in urls if u.find("sm:priority", ns) is not None)
     has_changefreq = all(u.find("sm:changefreq", ns).text in ["always", "hourly", "daily", "weekly", "monthly", "yearly", "never"] for u in urls if u.find("sm:changefreq", ns) is not None)
     has_lastmod = all(re.match(r"^\d{4}-\d{2}-\d{2}$", u.find("sm:lastmod", ns).text) for u in urls if u.find("sm:lastmod", ns) is not None)
@@ -227,7 +227,7 @@ test("Meta keywords present",
      '<meta name="keywords"' in html_content)
 
 test("Canonical link tag present and absolute",
-     '<link rel="canonical" href="https://sanzharshaymerdenov5-collab.github.io/Vovsehuyevie/">' in html_content)
+     '<link rel="canonical" href="https://dysh-1789.github.io/Vovsehuyevie/">' in html_content)
 
 test("SVG favicon present",
      '<link rel="icon" type="image/svg+xml"' in html_content)

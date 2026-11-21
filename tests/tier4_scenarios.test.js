@@ -116,7 +116,7 @@ async function runTier4Tests(reporter) {
       preventDefault: () => {}
     });
     const modal = env.document.getElementById('searchModal');
-    assert.equal(modal.classList.contains('hidden'), false, 'Search modal must open via Ctrl+K');
+    assert.equal(modal.open, true, 'Search modal must open via Ctrl+K');
   } catch (e) {
     if (e.name !== 'AssertionError') throw e;
   }
@@ -157,7 +157,7 @@ async function runTier4Tests(reporter) {
     input.dispatchEvent({ type: 'keydown', key: 'ArrowDown', bubbles: true, preventDefault: () => {} });
     input.dispatchEvent({ type: 'keydown', key: 'Enter', bubbles: true, preventDefault: () => {} });
     const modal = env.document.getElementById('searchModal');
-    assert.equal(modal.classList.contains('hidden'), true, 'Modal should close on Enter');
+    assert.equal(modal.open, false, 'Modal should close on Enter');
     assert.includes(env.window.location.pathname, '/character/', 'URL pathname should navigate to character');
     assert.equal(env.window.location.hash, '', 'URL must not contain #');
   } catch (e) {

@@ -269,12 +269,11 @@ const STATE = {
   searchQuery: '',
   searchFilter: 'all',
   selectedSearchIndex: -1,
-  lastFocusedElement: null
+  lastFocusedElement: null,
+  hasHydratedRoute: false
 };
 
-function getInitialTheme() {
-  const saved = safeStorage.getItem('wiki_theme', null);
-  if (saved === 'light' || saved === 'dark') return saved;
+function getSystemTheme() {
   try {
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
       return 'light';
@@ -282,7 +281,36 @@ function getInitialTheme() {
   } catch (e) {}
   return 'dark';
 }
+
+function getInitialTheme() {
+  const saved = safeStorage.getItem('wiki_theme', null);
+  if (saved === 'light' || saved === 'dark') return saved;
+  return getSystemTheme();
+}
 STATE.theme = getInitialTheme();
+
+function bindDialogClosedByFallback(dialog) {
+  if (!dialog || dialog._closedByFallbackBound) return;
+  if (typeof HTMLDialogElement === 'undefined' || 'closedBy' in HTMLDialogElement.prototype) return;
+  if (dialog.getAttribute('closedby') !== 'any') return;
+  dialog._closedByFallbackBound = true;
+
+  const isOutside = (e) => {
+    if (typeof dialog.getBoundingClientRect !== 'function') return false;
+    const r = dialog.getBoundingClientRect();
+    return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+  };
+  let pressedOutside = false;
+  dialog.addEventListener('pointerdown', (e) => {
+    pressedOutside = isOutside(e);
+  });
+  dialog.addEventListener('pointerup', (e) => {
+    if (pressedOutside && isOutside(e) && typeof dialog.close === 'function') {
+      dialog.close();
+    }
+    pressedOutside = false;
+  });
+}
 
 // Запуск приложения
 document.addEventListener('DOMContentLoaded', () => {
@@ -296,11 +324,14 @@ document.addEventListener('DOMContentLoaded', () => {
   initBackToTop();
   initReadingProgress();
 
+  document.querySelectorAll('dialog[closedby="any"]').forEach(bindDialogClosedByFallback);
+
   // Слушатели истории браузера (History API без #) и совместимость со старыми #-ссылками
   window.addEventListener('popstate', handleRoute);
   window.addEventListener('hashchange', handleRoute);
 
   handleRoute();
+  STATE.hasHydratedRoute = true;
 
   // Регистрация Service Worker только по HTTP(S) от корня сайта
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
@@ -357,12 +388,18 @@ function getFactionMembers(faction) {
 }
 
 /* ==========================================================================
-   ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ (СВЕТЛАЯ / ТЁМНАЯ)
+   ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ (СВЕТЛАЯ / ТЁМНАЯ + СИНХРОНИЗАЦИЯ С СИСТЕМОЙ)
    ========================================================================== */
 
 function applyTheme() {
+  const stored = safeStorage.getItem('wiki_theme', null);
   document.documentElement.setAttribute('data-theme', STATE.theme);
   updateThemeIcon();
+
+  const metaScheme = document.querySelector('meta[name="color-scheme"]');
+  if (metaScheme) {
+    metaScheme.setAttribute('content', (stored === 'light' || stored === 'dark') ? stored : 'light dark');
+  }
 
   const metaTheme = document.querySelector('meta[name="theme-color"]');
   if (metaTheme) {
@@ -381,11 +418,42 @@ function initTheme() {
   const toggleBtn = document.getElementById('themeToggleBtn');
   if (toggleBtn) {
     toggleBtn.addEventListener('click', () => {
-      STATE.theme = STATE.theme === 'dark' ? 'light' : 'dark';
+      const target = STATE.theme === 'dark' ? 'light' : 'dark';
+      STATE.theme = target;
+      if (target === getSystemTheme()) {
+        safeStorage.removeItem('wiki_theme');
+      } else {
+        safeStorage.setItem('wiki_theme', target);
+      }
       applyTheme();
-      safeStorage.setItem('wiki_theme', STATE.theme);
     });
   }
+
+  // Реакция на смену темы ОС (если пользователь не задал явный override)
+  try {
+    if (window.matchMedia) {
+      const mql = window.matchMedia('(prefers-color-scheme: light)');
+      const onSystemThemeChange = (e) => {
+        const stored = safeStorage.getItem('wiki_theme', null);
+        if (stored === 'light' || stored === 'dark') return;
+        STATE.theme = e.matches ? 'light' : 'dark';
+        applyTheme();
+      };
+      if (typeof mql.addEventListener === 'function') {
+        mql.addEventListener('change', onSystemThemeChange);
+      } else if (typeof mql.addListener === 'function') {
+        mql.addListener(onSystemThemeChange);
+      }
+    }
+  } catch (e) {}
+
+  // Синхронизация переопределения темы между вкладками
+  window.addEventListener('storage', (e) => {
+    if (e && e.key === 'wiki_theme') {
+      STATE.theme = getInitialTheme();
+      applyTheme();
+    }
+  });
 }
 
 function updateThemeIcon() {
@@ -445,7 +513,13 @@ function initNavigation() {
     const card = e.target && typeof e.target.closest === 'function' ? e.target.closest('[data-card-link]') : null;
     if (card && (!e.target.closest || !e.target.closest('button, a'))) {
       e.preventDefault();
-      navigateTo(card.getAttribute('data-card-link'));
+      const targetRoute = card.getAttribute('data-card-link') || '';
+      if (targetRoute.startsWith('character/')) {
+        document.querySelectorAll('.vt-hero-portrait').forEach(el => el.classList.remove('vt-hero-portrait'));
+        const avatarEl = card.querySelector('.card-avatar');
+        if (avatarEl) avatarEl.classList.add('vt-hero-portrait');
+      }
+      navigateTo(targetRoute);
     }
   });
 }
@@ -541,9 +615,59 @@ function handleAnchorNavigation(e, link) {
 function scrollToArticleSection(secId) {
   if (!secId) return;
   const targetEl = document.getElementById(secId);
-  if (targetEl && typeof targetEl.scrollIntoView === 'function') {
-    targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (targetEl) {
+    if (typeof targetEl.scrollIntoView === 'function') {
+      targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    if (typeof targetEl.focus === 'function') {
+      try {
+        targetEl.focus({ preventScroll: true });
+      } catch (e) {}
+    }
   }
+}
+
+let activeScrollspyObserver = null;
+
+function setupArticleScrollspy(container) {
+  if (activeScrollspyObserver && typeof activeScrollspyObserver.disconnect === 'function') {
+    activeScrollspyObserver.disconnect();
+    activeScrollspyObserver = null;
+  }
+  if (!container) return;
+  const tocLinks = Array.from(container.querySelectorAll('.wiki-toc a[data-scroll-target]'));
+  if (!tocLinks.length) return;
+
+  const setCurrentLink = (activeId) => {
+    tocLinks.forEach(link => {
+      const isCurrent = link.getAttribute('data-scroll-target') === activeId;
+      link.classList.toggle('target-current', isCurrent);
+      if (isCurrent) {
+        link.setAttribute('aria-current', 'true');
+      } else {
+        link.removeAttribute('aria-current');
+      }
+    });
+  };
+
+  if (typeof IntersectionObserver !== 'function') {
+    setCurrentLink(tocLinks[0].getAttribute('data-scroll-target'));
+    return;
+  }
+
+  const sections = tocLinks
+    .map(link => document.getElementById(link.getAttribute('data-scroll-target')))
+    .filter(Boolean);
+  if (!sections.length) return;
+
+  activeScrollspyObserver = new IntersectionObserver((entries) => {
+    const visible = entries.find(entry => entry.isIntersecting);
+    if (visible && visible.target && visible.target.id) {
+      setCurrentLink(visible.target.id);
+    }
+  }, { rootMargin: '-18% 0px -65% 0px', threshold: 0 });
+
+  sections.forEach(sec => activeScrollspyObserver.observe(sec));
 }
 
 function parseCurrentRoute() {
@@ -607,15 +731,61 @@ function safeParseQueryParams(queryString) {
   }
 }
 
+function closeNativeDialog(dialog) {
+  if (!dialog) return;
+  if (typeof dialog.close === 'function') {
+    if (dialog.open) dialog.close();
+  } else {
+    dialog.removeAttribute('open');
+    dialog.classList.add('hidden');
+  }
+}
+
+function openNativeDialog(dialog) {
+  if (!dialog) return;
+  bindDialogClosedByFallback(dialog);
+  if (typeof dialog.showModal === 'function') {
+    if (!dialog.open) dialog.showModal();
+  } else {
+    dialog.setAttribute('open', '');
+    dialog.classList.remove('hidden');
+  }
+}
+
+function runRouteViewTransition(updateDom, afterFinish) {
+  const prefersReducedMotion = (() => {
+    try {
+      return Boolean(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    } catch (e) {
+      return false;
+    }
+  })();
+
+  if (!STATE.hasHydratedRoute || prefersReducedMotion || typeof document.startViewTransition !== 'function') {
+    updateDom();
+    if (typeof afterFinish === 'function') afterFinish();
+    return;
+  }
+
+  const transition = document.startViewTransition(() => {
+    updateDom();
+  });
+  if (transition && transition.finished && typeof transition.finished.finally === 'function') {
+    transition.finished.finally(() => {
+      if (typeof afterFinish === 'function') afterFinish();
+    });
+  } else if (typeof afterFinish === 'function') {
+    afterFinish();
+  }
+}
+
 function handleRoute() {
   ensureRoutingContext();
   const parsed = parseCurrentRoute();
   const viewport = document.getElementById('contentViewport');
 
-  const sModal = document.getElementById('searchModal');
-  if (sModal && !sModal.classList.contains('hidden')) sModal.classList.add('hidden');
-  const aModal = document.getElementById('architectureModal');
-  if (aModal && !aModal.classList.contains('hidden')) aModal.classList.add('hidden');
+  closeNativeDialog(document.getElementById('searchModal'));
+  closeNativeDialog(document.getElementById('architectureModal'));
   closePortraitLightbox();
   hideWikiPreviewPopover();
 
@@ -634,6 +804,7 @@ function handleRoute() {
 
   const { route, id, extraParts, queryString } = parsed;
   const params = safeParseQueryParams(queryString);
+  const wasHydrated = STATE.hasHydratedRoute;
 
   STATE.currentView = route;
   STATE.currentId = id;
@@ -666,105 +837,126 @@ function handleRoute() {
     return;
   }
 
-  switch (route) {
-    case 'characters':
-      document.title = 'Персонажи — «Во Все Хуёвые» Wiki';
-      renderCharactersDirectory(viewport, params);
-      updateBreadcrumbs([
-        { title: 'Вики', link: routeToHref('home') },
-        { title: 'Персонажи' }
-      ]);
-      break;
+  if (route === 'character' && !id) {
+    navigateTo('characters', { replace: true });
+    return;
+  }
+  if (route === 'faction' && !id) {
+    navigateTo('factions', { replace: true });
+    return;
+  }
+  if (route === 'episode' && !id) {
+    navigateTo('episodes', { replace: true });
+    return;
+  }
 
-    case 'character':
-      if (id) {
+  const renderSelectedRoute = () => {
+    if (activeScrollspyObserver && typeof activeScrollspyObserver.disconnect === 'function') {
+      activeScrollspyObserver.disconnect();
+      activeScrollspyObserver = null;
+    }
+
+    switch (route) {
+      case 'characters':
+        document.title = 'Персонажи — «Во Все Хуёвые» Wiki';
+        renderCharactersDirectory(viewport, params);
+        updateBreadcrumbs([
+          { title: 'Вики', link: routeToHref('home') },
+          { title: 'Персонажи' }
+        ]);
+        break;
+
+      case 'character': {
         const char = STATE.data.characters.find(c => c.id === id);
         document.title = `${char ? char.name : 'Персонаж'} — «Во Все Хуёвые» Wiki`;
         renderCharacterArticle(viewport, id);
-      } else {
-        navigateTo('characters', { replace: true });
-        return;
+        break;
       }
-      break;
 
-    case 'factions':
-      document.title = 'Группировки — «Во Все Хуёвые» Wiki';
-      renderFactionsDirectory(viewport);
-      updateBreadcrumbs([
-        { title: 'Вики', link: routeToHref('home') },
-        { title: 'Группировки' }
-      ]);
-      break;
+      case 'factions':
+        document.title = 'Группировки — «Во Все Хуёвые» Wiki';
+        renderFactionsDirectory(viewport);
+        updateBreadcrumbs([
+          { title: 'Вики', link: routeToHref('home') },
+          { title: 'Группировки' }
+        ]);
+        break;
 
-    case 'faction':
-      if (id) {
+      case 'faction': {
         const faction = STATE.data.factions.find(f => f.id === id);
         document.title = `${faction ? faction.name : 'Группировка'} — «Во Все Хуёвые» Wiki`;
         renderFactionArticle(viewport, id);
-      } else {
-        navigateTo('factions', { replace: true });
-        return;
+        break;
       }
-      break;
 
-    case 'episodes':
-      document.title = 'Серии — «Во Все Хуёвые» Wiki';
-      renderEpisodesDirectory(viewport);
-      updateBreadcrumbs([
-        { title: 'Вики', link: routeToHref('home') },
-        { title: 'Серии' }
-      ]);
-      break;
+      case 'episodes':
+        document.title = 'Серии — «Во Все Хуёвые» Wiki';
+        renderEpisodesDirectory(viewport);
+        updateBreadcrumbs([
+          { title: 'Вики', link: routeToHref('home') },
+          { title: 'Серии' }
+        ]);
+        break;
 
-    case 'episode':
-      if (id) {
+      case 'episode': {
         const ep = (STATE.data.episodes || []).find(e => e.id === id);
         document.title = `${ep ? ep.title : 'Эпизод'} — «Во Все Хуёвые» Wiki`;
         renderEpisodeStub(viewport, id);
-      } else {
-        navigateTo('episodes', { replace: true });
-        return;
+        break;
       }
-      break;
 
-    case 'timeline':
-      document.title = 'Хронология — «Во Все Хуёвые» Wiki';
-      renderTimelineView(viewport);
-      updateBreadcrumbs([
-        { title: 'Вики', link: routeToHref('home') },
-        { title: 'Хронология серий' }
-      ]);
-      break;
+      case 'timeline':
+        document.title = 'Хронология — «Во Все Хуёвые» Wiki';
+        renderTimelineView(viewport);
+        updateBreadcrumbs([
+          { title: 'Вики', link: routeToHref('home') },
+          { title: 'Хронология серий' }
+        ]);
+        break;
 
-    case 'graph':
-      document.title = 'Граф связей — «Во Все Хуёвые» Wiki';
-      renderRelationshipGraph(viewport);
-      updateBreadcrumbs([
-        { title: 'Вики', link: routeToHref('home') },
-        { title: 'Граф связей' }
-      ]);
-      break;
+      case 'graph':
+        document.title = 'Граф связей — «Во Все Хуёвые» Wiki';
+        renderRelationshipGraph(viewport);
+        updateBreadcrumbs([
+          { title: 'Вики', link: routeToHref('home') },
+          { title: 'Граф связей' }
+        ]);
+        break;
 
-    case 'home':
-      document.title = '«Во Все Хуёвые» — Энциклопедия криминального Подзалупинска';
-      renderHomeView(viewport);
-      updateBreadcrumbs([
-        { title: 'Вики', link: routeToHref('home') },
-        { title: 'Главная страница' }
-      ]);
-      break;
+      case 'home':
+        document.title = '«Во Все Хуёвые» — Энциклопедия криминального Подзалупинска';
+        renderHomeView(viewport);
+        updateBreadcrumbs([
+          { title: 'Вики', link: routeToHref('home') },
+          { title: 'Главная страница' }
+        ]);
+        break;
 
-    default:
-      document.title = 'Страница не найдена — «Во Все Хуёвые» Wiki';
-      renderNotFoundView(viewport, route);
-      break;
-  }
+      default:
+        document.title = 'Страница не найдена — «Во Все Хуёвые» Wiki';
+        renderNotFoundView(viewport, route);
+        break;
+    }
 
-  const targetSec = params.get('section');
-  if (targetSec) {
-    scrollToArticleSection(targetSec);
-  }
-  updateReadingProgress();
+    const targetSec = params.get('section');
+    if (targetSec) {
+      scrollToArticleSection(targetSec);
+    }
+    updateReadingProgress();
+  };
+
+  runRouteViewTransition(renderSelectedRoute, () => {
+    document.querySelectorAll('.vt-hero-portrait').forEach(el => el.classList.remove('vt-hero-portrait'));
+    if (wasHydrated && viewport && !params.get('section')) {
+      const heading = viewport.querySelector('h1');
+      if (heading) {
+        if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1');
+        if (typeof heading.focus === 'function') {
+          try { heading.focus({ preventScroll: true }); } catch (e) {}
+        }
+      }
+    }
+  });
 }
 
 function updateBreadcrumbs(crumbs) {
@@ -889,7 +1081,7 @@ function copyCurrentUrl(sectionId = null) {
   ensureRoutingContext();
   const base = window.location && window.location.origin && !ROUTING.isFile
     ? `${window.location.origin}${routeToHref(STATE.currentId ? `${STATE.currentView}/${STATE.currentId}` : STATE.currentView)}`
-    : `https://sanzharshaymerdenov5-collab.github.io/Vovsehuyevie/${STATE.currentId ? `${STATE.currentView}/${STATE.currentId}/` : ''}`;
+    : `https://dysh-1789.github.io/Vovsehuyevie/${STATE.currentId ? `${STATE.currentView}/${STATE.currentId}/` : ''}`;
   const fullUrl = sectionId ? `${base}?section=${encodeURIComponent(sectionId)}` : base;
 
   if (typeof navigator !== 'undefined' && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
@@ -1503,16 +1695,18 @@ function renderCharacterArticle(container, charId) {
         ` : ''}
 
         <nav class="wiki-toc toc-box" aria-label="Содержание статьи">
-          <div class="toc-header">
-            <span class="toc-title">Содержание</span>
-            <button type="button" class="toc-toggle-btn" id="tocToggleBtn" aria-expanded="true" aria-controls="tocList">[скрыть]</button>
-          </div>
-          <ol class="toc-list" id="tocList">
-            ${tocItems.map(item => `<li><a href="${routeToHref(`character/${char.id}?section=${item.id}`)}" class="toc-link" data-scroll-target="${item.id}"><span class="toc-num">${item.num}</span>${escapeHtml(item.title)}</a></li>`).join('')}
-          </ol>
+          <details class="toc-details" open>
+            <summary class="toc-header">
+              <span class="toc-title">Содержание</span>
+              <span class="toc-toggle-label" aria-hidden="true"></span>
+            </summary>
+            <ol class="toc-list" id="tocList">
+              ${tocItems.map(item => `<li><a href="${routeToHref(`character/${char.id}?section=${item.id}`)}" class="toc-link" data-scroll-target="${item.id}"><span class="toc-num">${item.num}</span>${escapeHtml(item.title)}</a></li>`).join('')}
+            </ol>
+          </details>
         </nav>
 
-        <section class="wiki-section" id="sec-overview">
+        <section class="wiki-section" id="sec-overview" tabindex="-1">
           <h2 class="wiki-section-heading">
             <span><span class="mw-headline-number">${overviewNum}.</span> Общие сведения</span>
             <span class="mw-editsection">
@@ -1525,7 +1719,7 @@ function renderCharacterArticle(container, charId) {
           </div>
         </section>
 
-        <section class="wiki-section" id="sec-biography">
+        <section class="wiki-section" id="sec-biography" tabindex="-1">
           <h2 class="wiki-section-heading">
             <span><span class="mw-headline-number">${bioNum}.</span> Биография</span>
             <span class="mw-editsection">
@@ -1539,7 +1733,7 @@ function renderCharacterArticle(container, charId) {
         </section>
 
         ${char.personality ? `
-          <section class="wiki-section" id="sec-personality">
+          <section class="wiki-section" id="sec-personality" tabindex="-1">
             <h2 class="wiki-section-heading">
               <span><span class="mw-headline-number">${personalityNum}.</span> Личность и характер</span>
               <span class="mw-editsection">
@@ -1554,7 +1748,7 @@ function renderCharacterArticle(container, charId) {
         ` : ''}
 
         ${char.relationships && char.relationships.length ? `
-          <section class="wiki-section" id="sec-relationships">
+          <section class="wiki-section" id="sec-relationships" tabindex="-1">
             <h2 class="wiki-section-heading">
               <span><span class="mw-headline-number">${relationshipsNum}.</span> Связи и отношения</span>
               <span class="mw-editsection">
@@ -1587,7 +1781,7 @@ function renderCharacterArticle(container, charId) {
         ` : ''}
 
         ${char.trivia && char.trivia.length ? `
-          <section class="wiki-section" id="sec-trivia">
+          <section class="wiki-section" id="sec-trivia" tabindex="-1">
             <h2 class="wiki-section-heading">
               <span><span class="mw-headline-number">${triviaNum}.</span> Интересные факты</span>
               <span class="mw-editsection">
@@ -1603,7 +1797,7 @@ function renderCharacterArticle(container, charId) {
           </section>
         ` : ''}
 
-        <div class="wiki-categories-box" id="sec-categories">
+        <div class="wiki-categories-box" id="sec-categories" tabindex="-1">
           <span class="cat-label"><span class="cat-icon">🏷️</span> Категории:</span>
           <ul class="cat-list">
             ${categoryItems.map(cat => `<li><a href="${routeToHref(cat.route)}" class="cat-link">${escapeHtml(cat.label)}</a></li>`).join('')}
@@ -1614,17 +1808,12 @@ function renderCharacterArticle(container, charId) {
     </article>
   `;
 
-  const tocBtn = document.getElementById('tocToggleBtn');
-  const tocList = document.getElementById('tocList');
-  if (tocBtn && tocList) {
-    tocBtn.addEventListener('click', () => {
-      const isHidden = tocList.style.display === 'none';
-      tocList.style.display = isHidden ? 'block' : 'none';
-      tocBtn.textContent = isHidden ? '[скрыть]' : '[показать]';
-      tocBtn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
-    });
+  const infoboxAvatar = container.querySelector('.infobox-avatar');
+  if (infoboxAvatar) {
+    infoboxAvatar.classList.add('vt-hero-portrait');
   }
 
+  setupArticleScrollspy(container);
   bindDynamicLinks(container);
 }
 
@@ -1753,19 +1942,21 @@ function renderFactionArticle(container, factionId) {
         ` : ''}
 
         <nav class="wiki-toc" aria-label="Содержание статьи">
-          <div class="toc-header">
-            <span class="toc-title">Содержание</span>
-            <button type="button" class="toc-toggle-btn" id="factionTocToggleBtn" aria-expanded="true" aria-controls="factionTocList">[скрыть]</button>
-          </div>
-          <ol class="toc-list" id="factionTocList">
-            <li><a href="${routeToHref(`faction/${faction.id}?section=sec-fac-summary`)}" data-scroll-target="sec-fac-summary"><span class="toc-num">1</span>Деятельность и цели</a></li>
-            ${faction.history ? `<li><a href="${routeToHref(`faction/${faction.id}?section=sec-fac-history`)}" data-scroll-target="sec-fac-history"><span class="toc-num">2</span>История основания</a></li>` : ''}
-            <li><a href="${routeToHref(`faction/${faction.id}?section=sec-fac-members`)}" data-scroll-target="sec-fac-members"><span class="toc-num">${faction.history ? '3' : '2'}</span>Известные участники</a></li>
-            <li><a href="${routeToHref(`faction/${faction.id}?section=sec-fac-categories`)}" data-scroll-target="sec-fac-categories"><span class="toc-num">${faction.history ? '4' : '3'}</span>Категории</a></li>
-          </ol>
+          <details class="toc-details" open>
+            <summary class="toc-header">
+              <span class="toc-title">Содержание</span>
+              <span class="toc-toggle-label" aria-hidden="true"></span>
+            </summary>
+            <ol class="toc-list" id="factionTocList">
+              <li><a href="${routeToHref(`faction/${faction.id}?section=sec-fac-summary`)}" data-scroll-target="sec-fac-summary"><span class="toc-num">1</span>Деятельность и цели</a></li>
+              ${faction.history ? `<li><a href="${routeToHref(`faction/${faction.id}?section=sec-fac-history`)}" data-scroll-target="sec-fac-history"><span class="toc-num">2</span>История основания</a></li>` : ''}
+              <li><a href="${routeToHref(`faction/${faction.id}?section=sec-fac-members`)}" data-scroll-target="sec-fac-members"><span class="toc-num">${faction.history ? '3' : '2'}</span>Известные участники</a></li>
+              <li><a href="${routeToHref(`faction/${faction.id}?section=sec-fac-categories`)}" data-scroll-target="sec-fac-categories"><span class="toc-num">${faction.history ? '4' : '3'}</span>Категории</a></li>
+            </ol>
+          </details>
         </nav>
 
-        <section class="wiki-section" id="sec-fac-summary">
+        <section class="wiki-section" id="sec-fac-summary" tabindex="-1">
           <h2 class="wiki-section-heading">
             <span><span class="mw-headline-number">1.</span> Деятельность и цели</span>
             <span class="mw-editsection"><span class="mw-editsection-bracket">[</span><button type="button" class="mw-editsection-btn" data-open-arch="faction">архитектура</button><span class="mw-editsection-bracket">]</span></span>
@@ -1776,7 +1967,7 @@ function renderFactionArticle(container, factionId) {
         </section>
 
         ${faction.history ? `
-          <section class="wiki-section" id="sec-fac-history">
+          <section class="wiki-section" id="sec-fac-history" tabindex="-1">
             <h2 class="wiki-section-heading">
               <span><span class="mw-headline-number">2.</span> История основания</span>
               <span class="mw-editsection"><span class="mw-editsection-bracket">[</span><button type="button" class="mw-editsection-btn" data-open-arch="faction">архитектура</button><span class="mw-editsection-bracket">]</span></span>
@@ -1787,7 +1978,7 @@ function renderFactionArticle(container, factionId) {
           </section>
         ` : ''}
 
-        <section class="wiki-section" id="sec-fac-members">
+        <section class="wiki-section" id="sec-fac-members" tabindex="-1">
           <h2 class="wiki-section-heading">
             <span><span class="mw-headline-number">${faction.history ? '3.' : '2.'}</span> Известные участники (${members.length})</span>
             <span class="mw-editsection"><span class="mw-editsection-bracket">[</span><button type="button" class="mw-editsection-btn" data-open-arch="faction">архитектура</button><span class="mw-editsection-bracket">]</span></span>
@@ -1797,7 +1988,7 @@ function renderFactionArticle(container, factionId) {
           </div>
         </section>
 
-        <div class="wiki-categories-box" id="sec-fac-categories">
+        <div class="wiki-categories-box" id="sec-fac-categories" tabindex="-1">
           <span class="cat-label"><span class="cat-icon">🏷️</span> Категории:</span>
           <ul class="cat-list">
             <li><a href="${routeToHref('factions')}" class="cat-link">Группировки Подзалупинска</a></li>
@@ -1818,17 +2009,7 @@ function renderFactionArticle(container, factionId) {
     });
   }
 
-  const fTocBtn = document.getElementById('factionTocToggleBtn');
-  const fTocList = document.getElementById('factionTocList');
-  if (fTocBtn && fTocList) {
-    fTocBtn.addEventListener('click', () => {
-      const isHidden = fTocList.style.display === 'none';
-      fTocList.style.display = isHidden ? 'block' : 'none';
-      fTocBtn.textContent = isHidden ? '[скрыть]' : '[показать]';
-      fTocBtn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
-    });
-  }
-
+  setupArticleScrollspy(container);
   bindDynamicLinks(container);
 }
 
@@ -2406,8 +2587,10 @@ function initSearch() {
   openBtn.addEventListener('click', openSearch);
   closeBtn.addEventListener('click', closeSearch);
 
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) closeSearch();
+  modal.addEventListener('close', () => {
+    input.setAttribute('aria-expanded', 'false');
+    input.removeAttribute('aria-activedescendant');
+    STATE.selectedSearchIndex = -1;
   });
 
   window.addEventListener('keydown', (e) => {
@@ -2418,24 +2601,6 @@ function initSearch() {
         if (typeof e.preventDefault === 'function') e.preventDefault();
         openSearch();
       }
-    } else if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
-      closeSearch();
-    }
-  });
-
-  // Focus trap внутри модального окна поиска
-  modal.addEventListener('keydown', (e) => {
-    if (e.key !== 'Tab' || modal.classList.contains('hidden')) return;
-    const focusables = modal.querySelectorAll('button, input, a[href], [tabindex]:not([tabindex="-1"])');
-    if (!focusables.length) return;
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
     }
   });
 
@@ -2461,6 +2626,8 @@ function initSearch() {
       }
     } else if (e.key === 'Enter') {
       if (typeof e.preventDefault === 'function') e.preventDefault();
+      // IME-safe enter-to-submit guard (prevents premature navigation during CJK composition)
+      if (e.isComposing || e.keyCode === 229) return;
       if (items.length > 0) {
         const targetIndex = STATE.selectedSearchIndex >= 0 ? STATE.selectedSearchIndex : 0;
         const targetItem = items[targetIndex];
@@ -2508,25 +2675,20 @@ function initSearch() {
   }
 
   function openSearch() {
-    STATE.lastFocusedElement = document.activeElement;
-    modal.classList.remove('hidden');
+    openNativeDialog(modal);
     input.value = '';
     input.setAttribute('aria-expanded', 'true');
     STATE.searchQuery = '';
     STATE.selectedSearchIndex = -1;
     executeSearch();
-    setTimeout(() => input.focus(), 50);
+    if (typeof input.focus === 'function') input.focus();
   }
 
   function closeSearch() {
-    modal.classList.add('hidden');
+    closeNativeDialog(modal);
     input.setAttribute('aria-expanded', 'false');
     input.removeAttribute('aria-activedescendant');
     STATE.selectedSearchIndex = -1;
-    if (STATE.lastFocusedElement && typeof STATE.lastFocusedElement.focus === 'function') {
-      STATE.lastFocusedElement.focus();
-      STATE.lastFocusedElement = null;
-    }
   }
 
   function executeSearch() {
@@ -2697,33 +2859,6 @@ function initArchitectureModal() {
   if (closeBtn) closeBtn.addEventListener('click', closeArchitectureModal);
   if (closeBtn2) closeBtn2.addEventListener('click', closeArchitectureModal);
 
-  if (modal) {
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeArchitectureModal();
-    });
-
-    modal.addEventListener('keydown', (e) => {
-      if (e.key !== 'Tab' || modal.classList.contains('hidden')) return;
-      const focusables = modal.querySelectorAll('button, a[href], [tabindex]:not([tabindex="-1"])');
-      if (!focusables.length) return;
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    });
-  }
-
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
-      closeArchitectureModal();
-    }
-  });
-
   document.querySelectorAll('.arch-modal-box .modal-tab').forEach(tab => {
     tab.addEventListener('click', () => {
       const tabKey = tab.getAttribute('data-arch-tab');
@@ -2772,23 +2907,18 @@ function initArchitectureModal() {
 function openArchitectureModal(initialTab = 'character') {
   const modal = document.getElementById('architectureModal');
   if (!modal) return;
-  STATE.lastFocusedElement = document.activeElement;
-  modal.classList.remove('hidden');
+  openNativeDialog(modal);
   const targetTab = (initialTab === 'faction') ? 'faction' : 'character';
   switchArchTab(targetTab);
   const closeBtn = document.getElementById('closeArchModalBtn');
   if (closeBtn && typeof closeBtn.focus === 'function') {
-    setTimeout(() => closeBtn.focus(), 30);
+    closeBtn.focus();
   }
 }
 
 function closeArchitectureModal() {
   const modal = document.getElementById('architectureModal');
-  if (modal) modal.classList.add('hidden');
-  if (STATE.lastFocusedElement && typeof STATE.lastFocusedElement.focus === 'function') {
-    STATE.lastFocusedElement.focus();
-    STATE.lastFocusedElement = null;
-  }
+  closeNativeDialog(modal);
 }
 
 function switchArchTab(tabKey) {
@@ -2826,28 +2956,114 @@ function initBackToTop() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   });
+
+  // Возвращаем фокус в контент, если кнопка скрылась во время фокуса на ней
+  btn.addEventListener('focusout', (e) => {
+    if (!e || !e.relatedTarget) {
+      const vp = document.getElementById('contentViewport');
+      if (vp && typeof vp.focus === 'function' && (window.scrollY || 0) <= 10) {
+        try { vp.focus({ preventScroll: true }); } catch (err) {}
+      }
+    }
+  });
+
+  const supportsScrollState = typeof CSS !== 'undefined' && typeof CSS.supports === 'function' && CSS.supports('container-type', 'scroll-state');
+  if (supportsScrollState) return;
+
+  const sentinel = document.getElementById('scrollTopSentinel');
+  if (sentinel && typeof IntersectionObserver === 'function') {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        btn.classList.toggle('visible', !entry.isIntersecting);
+      });
+    }, { threshold: 0 });
+    observer.observe(sentinel);
+    return;
+  }
+
   window.addEventListener('scroll', () => {
     const y = window.scrollY || document.documentElement.scrollTop || 0;
     btn.classList.toggle('visible', y > 320);
-  });
+  }, { passive: true });
 }
 
 function showWikiToast(message) {
   let toast = document.getElementById('wikiToast');
+  let textEl = document.getElementById('wikiToastText');
   if (!toast) {
     toast = document.createElement('div');
     toast.id = 'wikiToast';
     toast.className = 'wiki-toast';
+    toast.setAttribute('popover', 'manual');
     toast.setAttribute('role', 'status');
     toast.setAttribute('aria-live', 'polite');
+    textEl = document.createElement('span');
+    textEl.id = 'wikiToastText';
+    textEl.className = 'wiki-toast-text';
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.id = 'wikiToastCloseBtn';
+    closeBtn.className = 'wiki-toast-close';
+    closeBtn.setAttribute('popovertarget', 'wikiToast');
+    closeBtn.setAttribute('popovertargetaction', 'hide');
+    closeBtn.setAttribute('aria-label', 'Закрыть уведомление');
+    closeBtn.textContent = '×';
+    toast.appendChild(textEl);
+    toast.appendChild(closeBtn);
     document.body.appendChild(toast);
   }
-  toast.textContent = message;
+
+  if (!toast._wikiToastBound) {
+    toast._wikiToastBound = true;
+    const closeBtn = toast.querySelector('.wiki-toast-close');
+    const hideToast = () => {
+      clearTimeout(toast._timer);
+      const wasFocused = document.activeElement && toast.contains && toast.contains(document.activeElement);
+      if (typeof toast.hidePopover === 'function') {
+        try { toast.hidePopover(); } catch (e) {}
+      }
+      toast.classList.remove('visible');
+      if (wasFocused && toast._triggerEl && typeof toast._triggerEl.focus === 'function') {
+        toast._triggerEl.focus();
+      }
+    };
+    toast._hideToast = hideToast;
+    if (closeBtn) {
+      closeBtn.addEventListener('click', hideToast);
+    }
+    toast.addEventListener('focusin', () => {
+      clearTimeout(toast._timer);
+    });
+    toast.addEventListener('focusout', () => {
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(hideToast, 2200);
+    });
+  }
+
+  toast._triggerEl = document.activeElement;
+  if (textEl) {
+    textEl.textContent = message;
+  } else {
+    toast.textContent = message;
+  }
+
+  if (typeof document.ariaNotify === 'function') {
+    try { document.ariaNotify(String(message)); } catch (e) {}
+  }
+
+  if (typeof toast.showPopover === 'function') {
+    try { toast.showPopover(); } catch (e) {}
+  }
   toast.classList.add('visible');
+
   clearTimeout(toast._timer);
   toast._timer = setTimeout(() => {
-    toast.classList.remove('visible');
-  }, 2800);
+    if (typeof toast._hideToast === 'function') {
+      toast._hideToast();
+    } else {
+      toast.classList.remove('visible');
+    }
+  }, 3400);
 }
 window.showWikiToast = showWikiToast;
 
@@ -2860,8 +3076,11 @@ function initReadingProgress() {
     bar.setAttribute('aria-hidden', 'true');
     document.body.appendChild(bar);
   }
-  window.addEventListener('scroll', updateReadingProgress);
-  window.addEventListener('resize', updateReadingProgress);
+  const supportsScrollTimeline = typeof CSS !== 'undefined' && typeof CSS.supports === 'function' && CSS.supports('animation-timeline', 'scroll()');
+  if (!supportsScrollTimeline) {
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('resize', updateReadingProgress, { passive: true });
+  }
   updateReadingProgress();
 }
 
@@ -2870,19 +3089,24 @@ function updateReadingProgress() {
   if (!bar) return;
   const isArticleView = STATE.currentView === 'character' || STATE.currentView === 'faction' || STATE.currentView === 'timeline';
   if (!isArticleView) {
-    bar.style.width = '0%';
+    bar.style.transform = 'scaleX(0)';
     bar.classList.remove('active');
     return;
   }
   bar.classList.add('active');
+  const supportsScrollTimeline = typeof CSS !== 'undefined' && typeof CSS.supports === 'function' && CSS.supports('animation-timeline', 'scroll()');
+  if (supportsScrollTimeline) {
+    bar.style.transform = '';
+    return;
+  }
   const scrollTop = window.scrollY || (document.documentElement && document.documentElement.scrollTop) || 0;
   const docHeight = ((document.documentElement && document.documentElement.scrollHeight) || 0) - (window.innerHeight || 0);
   if (docHeight <= 40) {
-    bar.style.width = '0%';
+    bar.style.transform = 'scaleX(0)';
     return;
   }
-  const pct = Math.min(100, Math.max(0, (scrollTop / docHeight) * 100));
-  bar.style.width = `${pct.toFixed(1)}%`;
+  const ratio = Math.min(1, Math.max(0, scrollTop / docHeight));
+  bar.style.transform = `scaleX(${ratio.toFixed(4)})`;
 }
 
 function formatBioParagraphHtml(p, charId) {
@@ -2931,7 +3155,6 @@ function renderArticlePagerHtml(type, currentId) {
 function openPortraitLightbox(char, triggerEl = null) {
   if (!char || !char.isImage || !char.avatar || !document.body) return;
   closePortraitLightbox();
-  STATE.lightboxTriggerEl = triggerEl || document.activeElement;
 
   const rawAvatar = String(char.avatar);
   const localMatch = rawAvatar.match(/^assets\/(valentin|gusev|gey-himbiovech|jesse)\.jpg$/i);
@@ -2940,16 +3163,15 @@ function openPortraitLightbox(char, triggerEl = null) {
     : `<img src="${escapeHtml(assetUrl(rawAvatar))}" alt="${escapeHtml(char.name)}" class="lightbox-img">`;
 
   const statusCls = getStatusClass(char.status);
-  const overlay = document.createElement('div');
-  overlay.id = 'portraitLightboxModal';
-  overlay.className = 'lightbox-overlay';
-  overlay.setAttribute('role', 'dialog');
-  overlay.setAttribute('aria-modal', 'true');
-  overlay.setAttribute('aria-label', `Портрет: ${char.name}`);
+  const dialog = document.createElement('dialog');
+  dialog.id = 'portraitLightboxModal';
+  dialog.className = 'lightbox-overlay wiki-dialog';
+  dialog.setAttribute('closedby', 'any');
+  dialog.setAttribute('aria-label', `Портрет: ${char.name}`);
 
-  overlay.innerHTML = `
+  dialog.innerHTML = `
     <div class="lightbox-box">
-      <button type="button" class="lightbox-close-btn" id="closeLightboxBtn" aria-label="Закрыть портрет">&times;</button>
+      <button type="button" class="lightbox-close-btn" id="closeLightboxBtn" command="close" commandfor="portraitLightboxModal" autofocus aria-label="Закрыть портрет">&times;</button>
       <div class="lightbox-stage">
         ${pictureHtml}
       </div>
@@ -2963,35 +3185,25 @@ function openPortraitLightbox(char, triggerEl = null) {
     </div>
   `;
 
-  document.body.appendChild(overlay);
+  document.body.appendChild(dialog);
+  openNativeDialog(dialog);
 
-  const closeBtn = overlay.querySelector('#closeLightboxBtn');
+  const closeBtn = dialog.querySelector('#closeLightboxBtn');
   if (closeBtn) {
     closeBtn.addEventListener('click', closePortraitLightbox);
-    if (typeof closeBtn.focus === 'function') setTimeout(() => closeBtn.focus(), 20);
   }
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) closePortraitLightbox();
+  dialog.addEventListener('close', () => {
+    if (typeof dialog.remove === 'function') dialog.remove();
   });
-
-  if (!window._wikiLightboxEscBound) {
-    window._wikiLightboxEscBound = true;
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && document.getElementById('portraitLightboxModal')) {
-        closePortraitLightbox();
-      }
-    });
-  }
 }
 
 function closePortraitLightbox() {
   const existing = document.getElementById('portraitLightboxModal');
-  if (existing && typeof existing.remove === 'function') {
-    existing.remove();
-  }
-  if (STATE.lightboxTriggerEl && typeof STATE.lightboxTriggerEl.focus === 'function') {
-    STATE.lightboxTriggerEl.focus();
-    STATE.lightboxTriggerEl = null;
+  if (existing) {
+    closeNativeDialog(existing);
+    if (existing.parentNode && typeof existing.remove === 'function') {
+      existing.remove();
+    }
   }
 }
 
@@ -3047,20 +3259,40 @@ function getPreviewDataForRoute(routeStr) {
   return null;
 }
 
-function showWikiPreviewPopover(anchorEl, routeStr) {
-  if (!anchorEl || !document.body || typeof anchorEl.getBoundingClientRect !== 'function') return;
-  const info = getPreviewDataForRoute(routeStr);
-  if (!info) return;
+let previewHideTimer = null;
+let activePreviewAnchor = null;
 
+function ensureWikiPreviewPopover() {
   let pop = document.getElementById('wikiPreviewPopover');
-  if (!pop) {
+  if (!pop && document.body) {
     pop = document.createElement('div');
     pop.id = 'wikiPreviewPopover';
     pop.className = 'wiki-preview-popover';
     pop.setAttribute('role', 'tooltip');
-    pop.setAttribute('aria-hidden', 'true');
+    try {
+      pop.setAttribute('popover', 'hint');
+    } catch (e) {
+      pop.setAttribute('popover', 'manual');
+    }
+    pop.addEventListener('mouseenter', () => {
+      clearTimeout(previewHideTimer);
+    });
+    pop.addEventListener('mouseleave', () => {
+      scheduleHideWikiPreviewPopover();
+    });
     document.body.appendChild(pop);
   }
+  return pop;
+}
+
+function showWikiPreviewPopover(anchorEl, routeStr) {
+  if (!anchorEl || !document.body) return;
+  const info = getPreviewDataForRoute(routeStr);
+  if (!info) return;
+
+  clearTimeout(previewHideTimer);
+  const pop = ensureWikiPreviewPopover();
+  if (!pop) return;
 
   pop.innerHTML = `
     <div class="preview-pop-header">
@@ -3074,24 +3306,58 @@ function showWikiPreviewPopover(anchorEl, routeStr) {
     <p class="preview-pop-desc">${escapeHtml(info.desc)}</p>
   `;
 
-  const rect = anchorEl.getBoundingClientRect();
-  const popWidth = 320;
-  const viewportW = window.innerWidth || 1024;
-  let left = rect.left + (rect.width / 2) - (popWidth / 2);
-  left = Math.max(12, Math.min(left, viewportW - popWidth - 12));
-  const showAbove = rect.top > 210;
-  const top = showAbove ? (rect.top - 10) : (rect.bottom + 10);
+  if (activePreviewAnchor && activePreviewAnchor !== anchorEl) {
+    activePreviewAnchor.classList.remove('wiki-preview-anchor-active');
+  }
+  activePreviewAnchor = anchorEl;
 
-  pop.style.left = `${Math.round(left)}px`;
-  pop.style.top = `${Math.round(top)}px`;
-  pop.classList.toggle('above', showAbove);
+  const supportsAnchorPos = typeof CSS !== 'undefined' && typeof CSS.supports === 'function'
+    && CSS.supports('position-area', 'block-end') && CSS.supports('anchor-name', '--a');
+
+  if (supportsAnchorPos) {
+    anchorEl.classList.add('wiki-preview-anchor-active');
+    pop.classList.add('uses-anchor-pos');
+    pop.classList.remove('above');
+    pop.style.left = '';
+    pop.style.top = '';
+  } else if (typeof anchorEl.getBoundingClientRect === 'function') {
+    pop.classList.remove('uses-anchor-pos');
+    const rect = anchorEl.getBoundingClientRect();
+    const popWidth = 320;
+    const viewportW = window.innerWidth || 1024;
+    let left = rect.left + (rect.width / 2) - (popWidth / 2);
+    left = Math.max(12, Math.min(left, viewportW - popWidth - 12));
+    const showAbove = rect.top > 210;
+    const top = showAbove ? (rect.top - 10) : (rect.bottom + 10);
+
+    pop.style.left = `${Math.round(left)}px`;
+    pop.style.top = `${Math.round(top)}px`;
+    pop.classList.toggle('above', showAbove);
+  }
+
+  if (typeof pop.showPopover === 'function') {
+    try { pop.showPopover(); } catch (e) {}
+  }
   pop.classList.add('visible');
 }
 
+function scheduleHideWikiPreviewPopover() {
+  clearTimeout(previewHideTimer);
+  previewHideTimer = setTimeout(hideWikiPreviewPopover, 120);
+}
+
 function hideWikiPreviewPopover() {
+  clearTimeout(previewHideTimer);
   const pop = document.getElementById('wikiPreviewPopover');
   if (pop) {
+    if (typeof pop.hidePopover === 'function') {
+      try { pop.hidePopover(); } catch (e) {}
+    }
     pop.classList.remove('visible');
+  }
+  if (activePreviewAnchor) {
+    activePreviewAnchor.classList.remove('wiki-preview-anchor-active');
+    activePreviewAnchor = null;
   }
 }
 
@@ -3101,10 +3367,13 @@ function bindWikiPreviewLinks(container) {
     if (link._wikiPreviewBound) return;
     link._wikiPreviewBound = true;
     const routeStr = link.getAttribute('data-preview-route');
+    if (!link.hasAttribute('aria-describedby')) {
+      link.setAttribute('aria-describedby', 'wikiPreviewPopover');
+    }
     link.addEventListener('mouseenter', () => showWikiPreviewPopover(link, routeStr));
-    link.addEventListener('mouseleave', hideWikiPreviewPopover);
+    link.addEventListener('mouseleave', scheduleHideWikiPreviewPopover);
     link.addEventListener('focus', () => showWikiPreviewPopover(link, routeStr));
-    link.addEventListener('blur', hideWikiPreviewPopover);
+    link.addEventListener('blur', scheduleHideWikiPreviewPopover);
   });
 }
 

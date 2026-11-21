@@ -2,13 +2,13 @@
  * Service Worker для энциклопедии «Во Все Хуёвые»
  * Поддерживает кэширование shell/ассетов и автономную работу (PWA).
  */
-const CACHE_NAME = 'vvh-wiki-v2.6';
+const CACHE_NAME = 'vvh-wiki-v2.7';
 
 const PRECACHE_PATHS = [
   '',
-  'css/style.css?v=2.6',
-  'js/data.js?v=2.6',
-  'js/app.js?v=2.6',
+  'css/style.css?v=2.7',
+  'js/data.js?v=2.7',
+  'js/app.js?v=2.7',
   'manifest.webmanifest',
   'assets/favicon-32.png',
   'assets/favicon-192.png',

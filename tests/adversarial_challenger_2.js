@@ -503,7 +503,7 @@ async function runAdversarialSuite() {
     {}
   );
   assert(
-    robotsTxt.includes('Sitemap: https://sanzharshaymerdenov5-collab.github.io/Vovsehuyevie/sitemap.xml'),
+    robotsTxt.includes('Sitemap: https://dysh-1789.github.io/Vovsehuyevie/sitemap.xml'),
     `SEO: robots.txt links to absolute sitemap.xml URL`,
     {}
   );
@@ -532,7 +532,7 @@ async function runAdversarialSuite() {
 
   // OpenGraph and Canonical checks in index.html
   assert(
-    html.includes('<link rel="canonical" href="https://sanzharshaymerdenov5-collab.github.io/Vovsehuyevie/">'),
+    html.includes('<link rel="canonical" href="https://dysh-1789.github.io/Vovsehuyevie/">'),
     `SEO: index.html defines canonical link matching production URL`,
     {}
   );

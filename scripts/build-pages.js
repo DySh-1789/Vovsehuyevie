@@ -22,9 +22,9 @@ const vm = require('vm');
 const { createBrowserEnvironment } = require('../tests/test_harness');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
-const SITE_ORIGIN = 'https://sanzharshaymerdenov5-collab.github.io/Vovsehuyevie';
-const DATA_VERSION = '2.6';
-const LASTMOD = '2026-11-18';
+const SITE_ORIGIN = 'https://dysh-1789.github.io/Vovsehuyevie';
+const DATA_VERSION = '2.7';
+const LASTMOD = '2026-11-21';
 
 const FAVICON_SVG_DATA = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚗️</text></svg>";
 
@@ -49,14 +49,14 @@ function loadCanonData() {
 
 function renderArchModalHtml() {
   return `  <!-- Модальное окно: Архитектура статьи (Спецификация и стандарты Вики) -->
-  <div class="modal-overlay hidden" id="architectureModal" role="dialog" aria-modal="true" aria-labelledby="archModalTitle">
+  <dialog class="modal-overlay wiki-dialog" id="architectureModal" closedby="any" aria-labelledby="archModalTitle">
     <div class="arch-modal-box">
       <div class="modal-header">
         <div class="modal-header-info">
           <div class="modal-badge">📐 Архитектура вики-статьи</div>
           <h3 id="archModalTitle">Пошаговый план структуры статьи</h3>
         </div>
-        <button type="button" class="modal-close-btn" id="closeArchModalBtn" title="Закрыть" aria-label="Закрыть модальное окно">&times;</button>
+        <button type="button" class="modal-close-btn" id="closeArchModalBtn" command="close" commandfor="architectureModal" title="Закрыть" aria-label="Закрыть модальное окно">&times;</button>
       </div>
 
       <div class="modal-tabs" role="tablist" aria-label="Выбор типа статьи">
@@ -116,10 +116,10 @@ function renderArchModalHtml() {
         <button type="button" class="btn btn-secondary" id="copyArchPlanBtn">
           <span class="btn-icon">📋</span> Скопировать план
         </button>
-        <button type="button" class="btn btn-primary" id="closeArchModalBtn2">Понятно, закрыть</button>
+        <button type="button" class="btn btn-primary" id="closeArchModalBtn2" command="close" commandfor="architectureModal">Понятно, закрыть</button>
       </div>
     </div>
-  </div>`;
+  </dialog>`;
 }
 
 function buildShellHtml(spec, stats, preRendered = null) {
@@ -170,6 +170,9 @@ function buildShellHtml(spec, stats, preRendered = null) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="text-scale" content="scale">
+  <meta name="color-scheme" content="light dark">
+  <script>(function(){try{var s=localStorage.getItem('wiki_theme');var m=document.querySelector('meta[name="color-scheme"]');if(s==='light'||s==='dark'){if(m)m.content=s;document.documentElement.setAttribute('data-theme',s);}else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches){document.documentElement.setAttribute('data-theme','light');}}catch(e){}})();</script>
   <meta name="wiki-depth" content="${spec.depth}">
   <meta name="wiki-route" content="${escapeHtml(spec.route)}">
   <title>${escapeHtml(spec.title)}</title>
@@ -209,6 +212,7 @@ function buildShellHtml(spec, stats, preRendered = null) {
   <link rel="stylesheet" href="${prefix}css/style.css?v=${DATA_VERSION}">${structuredData}
 </head>
 <body>
+  <div class="scroll-sentinel" id="scrollTopSentinel" aria-hidden="true"></div>
   <!-- Skip Link for Accessibility (WCAG 2.1 AA) -->
   <a href="#contentViewport" class="skip-link">Перейти к основному содержанию</a>
 
@@ -233,7 +237,7 @@ ${navItems.map(item => {
       <div class="header-actions">
         <button type="button" class="header-icon-btn" id="randomArticleBtn" title="Случайная статья" aria-label="Открыть случайную статью">🎲</button>
 
-        <button type="button" class="search-trigger" id="openSearchBtn" aria-label="Открыть быстрый поиск">
+        <button type="button" class="search-trigger" id="openSearchBtn" command="show-modal" commandfor="searchModal" aria-label="Открыть быстрый поиск">
           <span class="search-icon">🔍</span>
           <span class="search-placeholder">Быстрый поиск...</span>
           <kbd class="kbd-shortcut">/</kbd>
@@ -264,13 +268,13 @@ ${navItems.map(item => {
   </main>
 
   <!-- Модальное окно глобального мгновенного поиска -->
-  <div class="modal-overlay hidden" id="searchModal" role="dialog" aria-modal="true" aria-labelledby="searchModalTitle">
+  <dialog class="modal-overlay wiki-dialog" id="searchModal" closedby="any" aria-labelledby="searchModalTitle">
     <div class="search-modal-box">
       <h2 id="searchModalTitle" class="visually-hidden">Поиск по энциклопедии</h2>
       <div class="search-input-wrapper">
         <span class="search-box-icon">🔍</span>
-        <input type="text" id="globalSearchInput" placeholder="Поиск персонажей, псевдонимов, цитат, серий..." autocomplete="off" aria-label="Поиск по энциклопедии" role="combobox" aria-autocomplete="list" aria-controls="searchResultsList" aria-expanded="false">
-        <button type="button" class="modal-close-btn" id="closeSearchBtn" aria-label="Закрыть поиск">&times;</button>
+        <input type="text" id="globalSearchInput" placeholder="Поиск персонажей, псевдонимов, цитат, серий..." autocomplete="off" autofocus aria-label="Поиск по энциклопедии" role="combobox" aria-autocomplete="list" aria-controls="searchResultsList" aria-expanded="false">
+        <button type="button" class="modal-close-btn" id="closeSearchBtn" command="close" commandfor="searchModal" aria-label="Закрыть поиск">&times;</button>
       </div>
       <div class="search-filters-row">
         <span class="filter-label">Фильтр:</span>
@@ -286,9 +290,17 @@ ${navItems.map(item => {
         <span>Клавиши: <kbd>↑</kbd> <kbd>↓</kbd> выбор, <kbd>Enter</kbd> перейти, <kbd>ESC</kbd> закрыть</span>
       </div>
     </div>
-  </div>
+  </dialog>
 
 ${renderArchModalHtml()}
+
+  <!-- Область тост-уведомлений (Top Layer Popover) -->
+  <div class="wiki-toast-region" id="wikiToastRegion" role="region" aria-label="Уведомления">
+    <div id="wikiToast" class="wiki-toast" popover="manual" role="status" aria-live="polite">
+      <span class="wiki-toast-text" id="wikiToastText"></span>
+      <button type="button" class="wiki-toast-close" id="wikiToastCloseBtn" popovertarget="wikiToast" popovertargetaction="hide" aria-label="Закрыть уведомление">&times;</button>
+    </div>
+  </div>
 
   <!-- Подвал сайта (Footer) -->
   <footer class="wiki-footer">
@@ -312,7 +324,7 @@ ${renderArchModalHtml()}
       <div class="footer-col" id="footerEditingCol">
         <h4>Редактирование</h4>
         <p>Каноничная база знаний защищена от произвольных правок. Для ознакомления со стандартом оформления и структурой страниц используйте спецификацию:</p>
-        <button type="button" class="btn btn-secondary btn-arch-footer" id="openArchitectureBtn">
+        <button type="button" class="btn btn-secondary btn-arch-footer" id="openArchitectureBtn" command="show-modal" commandfor="architectureModal">
           <span class="btn-icon">📐</span>
           <span>Архитектура статьи</span>
         </button>
@@ -326,8 +338,8 @@ ${renderArchModalHtml()}
   <button type="button" class="back-to-top-btn" id="backToTopBtn" aria-label="Наверх">↑ Наверх</button>
 
   <!-- Скрипты приложения -->
-  <script src="${prefix}js/data.js?v=${DATA_VERSION}"></script>
-  <script src="${prefix}js/app.js?v=${DATA_VERSION}"></script>
+  <script src="${prefix}js/data.js?v=${DATA_VERSION}" defer></script>
+  <script src="${prefix}js/app.js?v=${DATA_VERSION}" defer fetchpriority="high"></script>
 </body>
 </html>
 `;
