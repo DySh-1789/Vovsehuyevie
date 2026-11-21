@@ -889,7 +889,7 @@ function copyCurrentUrl(sectionId = null) {
   ensureRoutingContext();
   const base = window.location && window.location.origin && !ROUTING.isFile
     ? `${window.location.origin}${routeToHref(STATE.currentId ? `${STATE.currentView}/${STATE.currentId}` : STATE.currentView)}`
-    : `https://sanzharshaymerdenov5-collab.github.io/Vovsehuyevie/${STATE.currentId ? `${STATE.currentView}/${STATE.currentId}/` : ''}`;
+    : `https://dysh-1789.github.io/Vovsehuyevie/${STATE.currentId ? `${STATE.currentView}/${STATE.currentId}/` : ''}`;
   const fullUrl = sectionId ? `${base}?section=${encodeURIComponent(sectionId)}` : base;
 
   if (typeof navigator !== 'undefined' && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {

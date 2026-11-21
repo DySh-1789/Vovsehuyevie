@@ -34,8 +34,8 @@ CSS_PATH = os.path.join(BASE_DIR, 'css', 'style.css')
 APP_JS_PATH = os.path.join(BASE_DIR, 'js', 'app.js')
 ASSETS_DIR = os.path.join(BASE_DIR, 'assets')
 
-CANONICAL_ORIGIN = "https://sanzharshaymerdenov5-collab.github.io"
-CANONICAL_BASE = "https://sanzharshaymerdenov5-collab.github.io/Vovsehuyevie/"
+CANONICAL_ORIGIN = "https://dysh-1789.github.io"
+CANONICAL_BASE = "https://dysh-1789.github.io/Vovsehuyevie/"
 
 class HTMLHeadExtractor(HTMLParser):
     def __init__(self):
@@ -236,7 +236,7 @@ def run_tests():
 
         # RFC 3986 parse
         parsed = urllib.parse.urlparse(loc)
-        if parsed.scheme != 'https' or parsed.netloc != 'sanzharshaymerdenov5-collab.github.io':
+        if parsed.scheme != 'https' or parsed.netloc != 'dysh-1789.github.io':
             all_locs_valid = False
 
         # lastmod validation

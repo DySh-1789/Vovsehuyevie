@@ -928,7 +928,7 @@ function createBrowserEnvironment(options = {}) {
 
   const windowListeners = new Map();
   const storage = new MockLocalStorage(storageMode);
-  const origin = protocol === 'file:' ? 'null' : 'https://sanzharshaymerdenov5-collab.github.io';
+  const origin = protocol === 'file:' ? 'null' : 'https://dysh-1789.github.io';
 
   const normalizedInitPath = initialPath.startsWith('/') ? initialPath : `/${initialPath}`;
   const [initPathname, initSearchPart = ''] = normalizedInitPath.split('?');
@@ -937,7 +937,7 @@ function createBrowserEnvironment(options = {}) {
   const locationObj = {
     protocol,
     origin,
-    host: protocol === 'file:' ? '' : 'sanzharshaymerdenov5-collab.github.io',
+    host: protocol === 'file:' ? '' : 'dysh-1789.github.io',
     pathname: initPathname,
     search: initSearch,
     _hash: initialHash,

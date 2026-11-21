@@ -6,7 +6,7 @@
 
 ## 🚀 Как открыть и собрать сайт
 
-1. **Онлайн (GitHub Pages)**: [https://sanzharshaymerdenov5-collab.github.io/Vovsehuyevie/](https://sanzharshaymerdenov5-collab.github.io/Vovsehuyevie/)
+1. **Онлайн (GitHub Pages)**: [https://dysh-1789.github.io/Vovsehuyevie/](https://dysh-1789.github.io/Vovsehuyevie/)
 2. **Локально без сервера**: просто откройте **`index.html`** двойным кликом в любом современном браузере.
 3. **Локальный HTTP-сервер** (для проверки чистых URL и Service Worker):
    ```bash
